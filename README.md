@@ -4,8 +4,12 @@ PROJECT: A programs that copy files into and out of a VirtualBox VDI file contai
 
 Status of Project: Not Complete 
 
- HOW TO RUN THE PROJECT
-                     ( IN YOUR TERMINAL AFTER GETTING INTO THE CODES DIRECTORY ) 
+HOW TO RUN THE PROJECT
+ 
+After you're in the directory, get into the CODES directory 
+If any updates in program then type "make clean " into your terminal and then "make"
+After your program is updated  run this command below.
+Command: 
    ./vdi [vdi-filename]
    
 
