@@ -4,6 +4,7 @@
 #include<unistd.h>
 #include<stdio.h>
 #include<iostream>
+#include <fstream>
 #include"vdifunctions.h"
 #include"vdiheader.h"
 #include"vdifile.h"
