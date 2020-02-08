@@ -1,7 +1,7 @@
 #ifndef MBR
 #define MBR
 #include"partitionData.h"
-
+#pragma pack(1)
 const unsigned short BOOT_SECTOR_MAGIC = 0xaa55;
 
 struct mbrSector{

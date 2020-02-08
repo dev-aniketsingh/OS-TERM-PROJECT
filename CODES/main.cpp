@@ -38,9 +38,11 @@ int main(){
    dumpVDIHeader(file);
    displayUUID(file,id);
    displayTranslationMap(file);
+
+   /* Change the position of file descriptor pointer and read the mbr data*/
    mbrSeek(file,file->header.frameOffset,SEEK_SET);
    mbrReadBytes=mbrRead(file,mbrData,sizeof(mbrData));
-   cout<<"Boot signature : "<<mbrData.partitionEntryInfo[0].logicalBlocking<<"\n";
+   displayPartitionInfo(mbrData);
    return 0;
 }
 

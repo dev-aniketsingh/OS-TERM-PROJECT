@@ -55,3 +55,62 @@ int mbrSeek(struct vdifile *f,int offset,int anchor){
     }
     return -1;
 }
+void displayPartitionInfo(struct mbrSector mbrData){
+  cout<<"--------------Partition Entry 0--------------"<<"\n";
+  cout<<"Boot indicater : "<< (int)mbrData.partitionEntryInfo[0].bootIndicater<<"        Inactive"<<"\n";
+  cout<<"First absolute sector CHS: ";
+  for(int i=2;i>=0;i--){
+    cout<<std::dec<<(int)mbrData.partitionEntryInfo[0].firstChs[i]<<"-";
+  }
+  cout<<"\n";
+  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[0].partitionDescriptor<<"\n";
+  cout<<"Last absolute sector CHS: ";
+  cout<<std::dec<<(int)mbrData.partitionEntryInfo[0].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[0].lastChs[2]
+      <<"-"<<(int)mbrData.partitionEntryInfo[0].lastChs[0]<<"\n";
+  cout<<"Logical blocking : "<< mbrData.partitionEntryInfo[0].logicalBlocking<<endl;
+  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[0].numberOfSectorInPartition<<"\n";
+  cout<<"---------------------------------------------------------------------------------------"<<"\n";
+  cout<<"\n\n"<<"--------------Partition Entry 1--------------"<<"\n";
+  cout<<"Boot indicater : "<< (int)mbrData.partitionEntryInfo[1].bootIndicater<<"        Inactive"<<"\n";
+  cout<<"First absolute sector CHS: ";
+  for(int i=2;i>=0;i--){
+    cout<<std::dec<<(int)mbrData.partitionEntryInfo[1].firstChs[i]<<"-";
+  }
+  cout<<"\n";
+  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[1].partitionDescriptor<<"\n";
+  cout<<"Last absolute sector CHS: ";
+  cout<<std::dec<<(int)mbrData.partitionEntryInfo[1].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[1].lastChs[2]
+      <<"-"<<(int)mbrData.partitionEntryInfo[1].lastChs[0]<<"\n";
+  cout<<"Logical blocking : "<< mbrData.partitionEntryInfo[1].logicalBlocking<<endl;
+  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[1].numberOfSectorInPartition<<"\n";
+  cout<<"---------------------------------------------------------------------------------------"<<"\n";
+  cout<<"\n\n"<<"--------------Partition Entry 2--------------"<<"\n";
+  cout<<"Boot indicater : "<< (int)mbrData.partitionEntryInfo[2].bootIndicater<<"        Inactive"<<"\n";
+  cout<<"First absolute sector CHS: ";
+  for(int i=2;i>=0;i--){
+    cout<<std::dec<<(int)mbrData.partitionEntryInfo[2].firstChs[i]<<"-";
+  }
+  cout<<"\n";
+  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[2].partitionDescriptor<<"\n";
+  cout<<"Last absolute sector CHS: ";
+  cout<<std::dec<<(int)mbrData.partitionEntryInfo[2].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[2].lastChs[2]
+      <<"-"<<(int)mbrData.partitionEntryInfo[2].lastChs[0]<<"\n";
+  cout<<"Logical blocking : "<< mbrData.partitionEntryInfo[2].logicalBlocking<<endl;
+  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[2].numberOfSectorInPartition<<"\n";
+  cout<<"---------------------------------------------------------------------------------------"<<"\n";
+  cout<<"\n\n"<<"--------------Partition Entry 3--------------"<<"\n";
+  cout<<"Boot indicater : "<< (int)mbrData.partitionEntryInfo[3].bootIndicater<<"        Inactive"<<"\n";
+  cout<<"First absolute sector CHS: ";
+  for(int i=2;i>=0;i--){
+    cout<<std::dec<<(int)mbrData.partitionEntryInfo[3].firstChs[i]<<"-";
+  }
+  cout<<"\n";
+  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[3].partitionDescriptor<<"\n";
+  cout<<"Last absolute sector CHS: ";
+  cout<<std::dec<<(int)mbrData.partitionEntryInfo[3].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[2]
+      <<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[0]<<"\n";
+  cout<<"Logical blocking : "<< mbrData.partitionEntryInfo[3].logicalBlocking<<endl;
+  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[3].numberOfSectorInPartition;
+  cout<<"---------------------------------------------------------------------------------------"<<"\n";
+
+}

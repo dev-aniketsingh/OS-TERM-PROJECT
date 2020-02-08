@@ -1,6 +1,6 @@
 #ifndef VDIHEADER
 #define VDIHEADER
-
+#pragma pack(1)
 struct vdiheader{
   uint8_t imageName[64];
   uint32_t signature;
