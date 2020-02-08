@@ -7,8 +7,17 @@ Status of Project: Not Complete
 HOW TO RUN THE PROJECT
  
 After you're in the directory, get into the CODES directory 
+
+
+
 If any updates in program then type "make clean " into your terminal and then "make"
+
+
+
+
 After your program is updated  run this command below.
+
+
 Command: 
    ./vdi [vdi-filename]
    
