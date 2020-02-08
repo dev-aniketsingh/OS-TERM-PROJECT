@@ -3,6 +3,7 @@
 #include<fcntl.h>
 #include<unistd.h>
 #include<stdio.h>
+#include <fstream>
 #include<iostream>
 #include"vdiheader.h"
 #include"vdifile.h"
@@ -28,17 +29,21 @@ static char *uuid2ascii(struct UUID *);
 static char
     uuidStr[40];
 
-int main(){
-   struct vdifile * file ;
-   int mbrReadBytes;
-   struct mbrSector mbrData;
-   struct dataBlock data;
-   file = vdiOpen("/home/sagar/5806.public/Test-fixed-1k.vdi");
-   vdiRead(file,&(file->header),sizeof(file->header));
-   struct UUID* id= (struct UUID *)malloc(sizeof(struct UUID));
-   dumpVDIHeader(file);
-   displayUUID(file,id);
-   displayTranslationMap(file);
+int main(int argc, char* argv[]){
+  struct vdifile * file ;
+  /*if(argc < 1) {
+    cout <<"File not included \n";
+    return 1;
+  }*/
+  int mbrReadBytes;
+  struct mbrSector mbrData;
+  struct dataBlock data;
+  file = vdiOpen(argv[1]);
+  vdiRead(file,&(file->header),sizeof(file->header));
+  struct UUID* id= (struct UUID *)malloc(sizeof(struct UUID));
+  dumpVDIHeader(file);
+  displayUUID(file,id);
+  displayTranslationMap(file);
 
    /* Change the position of file descriptor pointer and read the mbr data*/
    mbrSeek(file,file->header.frameOffset,SEEK_SET);
