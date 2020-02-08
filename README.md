@@ -5,7 +5,7 @@ PROJECT: A programs that copy files into and out of a VirtualBox VDI file contai
 Status of Project: Not Complete 
 
  HOW TO RUN THE PROJECT
- IN YOUR TERMINAL AFTER GETTING INTO THE CODES DIRECTORY 
+                     ( IN YOUR TERMINAL AFTER GETTING INTO THE CODES DIRECTORY ) 
    ./vdi [vdi-filename]
    
 
