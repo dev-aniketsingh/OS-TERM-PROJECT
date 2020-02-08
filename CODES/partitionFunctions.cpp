@@ -110,7 +110,49 @@ void displayPartitionInfo(struct mbrSector mbrData){
   cout<<std::dec<<(int)mbrData.partitionEntryInfo[3].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[2]
       <<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[0]<<"\n";
   cout<<"Logical blocking : "<< mbrData.partitionEntryInfo[3].logicalBlocking<<endl;
-  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[3].numberOfSectorInPartition;
+  cout<<"Number of sectors in a partition : "<<std::dec<<mbrData.partitionEntryInfo[3].numberOfSectorInPartition<<"\n";
   cout<<"---------------------------------------------------------------------------------------"<<"\n";
+
+}
+void displaySuperBlock(struct vdifile *f,struct dataBlock data,struct mbrSector mbrData){
+  int locationOfSuperBlock,
+      count=0;
+  locationOfSuperBlock= f->header.frameOffset+mbrData.partitionEntryInfo[0].logicalBlocking+0x400;
+  cout<<"\n\n"<<"Offset: 0x400 ------------------------------------------------------------------"<<"\n\n";
+  for(unsigned char x:data.firstData){
+    cout<<"\t"<<std::hex<<(int)x;
+    count++;
+    if(count==16){
+      cout<<"\n";
+      count=0;
+    }
+  }
+  cout<<"\n\n"<<"Offset: 0x500------------------------------------------------------------------"<<"\n\n";
+  for(unsigned char x:data.secondData){
+    cout<<"\t"<<std::hex<<(int)x;
+    count++;
+    if(count==16){
+      cout<<"\n";
+      count=0;
+    }
+  }
+  cout<<"\n\n"<<"Offset: 0x600------------------------------------------------------------------"<<"\n\n";
+  for(unsigned char x:data.thirdData){
+    cout<<"\t"<<std::hex<<(int)x;
+    count++;
+    if(count==16){
+      cout<<"\n";
+      count=0;
+    }
+  }
+  cout<<"\n\n"<<"Offset: 0x700------------------------------------------------------------------"<<"\n\n";
+  for(unsigned char x:data.fourthData){
+    cout<<"\t"<<std::hex<<(int)x;
+    count++;
+    if(count==16){
+      cout<<"\n";
+      count=0;
+    }
+  }
 
 }

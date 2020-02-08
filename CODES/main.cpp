@@ -32,6 +32,7 @@ int main(){
    struct vdifile * file ;
    int mbrReadBytes;
    struct mbrSector mbrData;
+   struct dataBlock data;
    file = vdiOpen("/home/sagar/5806.public/Test-fixed-1k.vdi");
    vdiRead(file,&(file->header),sizeof(file->header));
    struct UUID* id= (struct UUID *)malloc(sizeof(struct UUID));
@@ -43,6 +44,9 @@ int main(){
    mbrSeek(file,file->header.frameOffset,SEEK_SET);
    mbrReadBytes=mbrRead(file,mbrData,sizeof(mbrData));
    displayPartitionInfo(mbrData);
+   vdiSeek(file,file->header.frameOffset+mbrData.partitionEntryInfo[0].logicalBlocking*512+1024,SEEK_SET);
+   vdiRead(file,&data,sizeof(data));
+   displaySuperBlock(file,data,mbrData);
    return 0;
 }
 
