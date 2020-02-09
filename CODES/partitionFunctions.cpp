@@ -63,7 +63,7 @@ void displayPartitionInfo(struct mbrSector mbrData){
     cout<<std::dec<<(int)mbrData.partitionEntryInfo[0].firstChs[i]<<"-";
   }
   cout<<"\n";
-  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[0].partitionDescriptor<<"\n";
+  cout<<" Partition Type : "<<std::hex<<(int)mbrData.partitionEntryInfo[0].partitionDescriptor<<"\n";
   cout<<"Last absolute sector CHS: ";
   cout<<std::dec<<(int)mbrData.partitionEntryInfo[0].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[0].lastChs[2]
       <<"-"<<(int)mbrData.partitionEntryInfo[0].lastChs[0]<<"\n";
@@ -77,7 +77,7 @@ void displayPartitionInfo(struct mbrSector mbrData){
     cout<<std::dec<<(int)mbrData.partitionEntryInfo[1].firstChs[i]<<"-";
   }
   cout<<"\n";
-  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[1].partitionDescriptor<<"\n";
+  cout<<" Partition Type : "<<std::hex<<(int)mbrData.partitionEntryInfo[1].partitionDescriptor<<"\n";
   cout<<"Last absolute sector CHS: ";
   cout<<std::dec<<(int)mbrData.partitionEntryInfo[1].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[1].lastChs[2]
       <<"-"<<(int)mbrData.partitionEntryInfo[1].lastChs[0]<<"\n";
@@ -91,7 +91,7 @@ void displayPartitionInfo(struct mbrSector mbrData){
     cout<<std::dec<<(int)mbrData.partitionEntryInfo[2].firstChs[i]<<"-";
   }
   cout<<"\n";
-  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[2].partitionDescriptor<<"\n";
+  cout<<" Partition Type : "<<std::hex<<(int)mbrData.partitionEntryInfo[2].partitionDescriptor<<"\n";
   cout<<"Last absolute sector CHS: ";
   cout<<std::dec<<(int)mbrData.partitionEntryInfo[2].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[2].lastChs[2]
       <<"-"<<(int)mbrData.partitionEntryInfo[2].lastChs[0]<<"\n";
@@ -105,7 +105,7 @@ void displayPartitionInfo(struct mbrSector mbrData){
     cout<<std::dec<<(int)mbrData.partitionEntryInfo[3].firstChs[i]<<"-";
   }
   cout<<"\n";
-  cout<<" Partition Type : "<<(int)mbrData.partitionEntryInfo[3].partitionDescriptor<<"\n";
+  cout<<" Partition Type : "<<std::hex<<(int)mbrData.partitionEntryInfo[3].partitionDescriptor<<"\n";
   cout<<"Last absolute sector CHS: ";
   cout<<std::dec<<(int)mbrData.partitionEntryInfo[3].lastChs[1]<<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[2]
       <<"-"<<(int)mbrData.partitionEntryInfo[3].lastChs[0]<<"\n";
