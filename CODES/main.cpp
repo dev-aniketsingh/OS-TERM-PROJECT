@@ -31,10 +31,10 @@ static char
 
 int main(int argc, char* argv[]){
   struct vdifile * file ;
-  /*if(argc < 1) {
+  if(argc < 2) {
     cout <<"File not included \n";
     return 1;
-  }*/
+  }
   int mbrReadBytes;
   struct mbrSector mbrData;
   struct dataBlock data;
