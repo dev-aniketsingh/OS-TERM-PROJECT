@@ -1,7 +1,7 @@
 #ifndef SUPERBLOCK  //SUPERBLOCK
 #define SUPERBLOCK //SUPERBLOCK
 
-struct __attribute__ ((packed)) Ext2File {
+struct __attribute__ ((packed)) superBlock {
    unsigned int s_inodes_count;
    unsigned int s_blocks_count;
    unsigned int s_r_blocks_count;
