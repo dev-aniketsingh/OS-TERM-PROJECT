@@ -1,13 +1,10 @@
-#ifndef SUPERBLOCK_FUNCTIONS
-#define SUPERBLOCK_FUNCTIONS
-#include"superblock.h"
-#include<iostream>
+#ifndef SUPERBLOCKFUNCTIONS
+#define SUPERBLOCKFUNCTIONS
+#include"ext2File.h"
+#include"vdifile.h"
+#include"mbr.h"
 
-
-using namespace std;
-
-
-
-
-
+int readSuperBlock(struct ext2File * ext2,uint32_t blockNumber,struct vdifile * file,struct mbrSector mbr );
+int writeSuperBlock(struct ext2File* ext2, uint32_t blockNumber,struct vdifile * file,struct mbrSector mbr);
+int displaySuperBlock(struct ext2File* ext2);
 #endif
