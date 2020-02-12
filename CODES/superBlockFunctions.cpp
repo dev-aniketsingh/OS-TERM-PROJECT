@@ -55,7 +55,7 @@ int displaySuperBlock(struct ext2File* ext2){
   cout<<"OS creator : "<<std::dec<< ext2->superblock.s_creator_os<<"\n";
   cout<<"Default reserve UID : "<<std::dec<< ext2->superblock.s_def_resuid<<"\n";
   cout<<"Default reserve GID : "<<std::dec<< ext2->superblock.s_def_resgid<<"\n";
-  cout<<"First Inode Number : "<<std::dec<< ext2->superblock.s_first_ino<<"\n;
+  cout<<"First Inode Number : "<<std::dec<< ext2->superblock.s_first_ino<<"\n";
   cout<<"Inode Size : "<<std::dec<< ext2->superblock.s_inodes_count;
   cout<<"Block group Number : "<<std::dec<< ext2->superblock.s_inodes_count;
   cout<<"Feature Compatibility bits : "<<std::dec<< ext2->superblock.s_inodes_count;
