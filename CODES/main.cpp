@@ -65,6 +65,23 @@ int main(int argc, char* argv[]){
   struct ext2File * ext2 = (struct ext2File *) malloc(sizeof(ext2));
   readSuperBlock(ext2,0,file,mbrData);
   displaySuperBlock(ext2);
+  /*offset to superBlock*/
+  int blockSize= 1024<<(ext2->superblock.s_log_block_size);
+  int totalBlockGroup= (ext2->superblock).s_blocks_count/(ext2->superblock).s_blocks_per_group;
+  struct blockGroupDescriptor table[totalBlockGroup];
+  vdiRead(file,table,sizeof(table));
+  cout<<"Block Bit Map"<<"\t"<<"Inode Bitmap"<<"\t"<<"Innode Table"<<"\t"<<"Free Blocks"<<"\t"<<"Free Inodes"<<"\t"<<"Used Directory"<<"\n";
+  for(int i=0;i<totalBlockGroup;i++){
+    cout<<table[i].bg_block_bitmap<<"\t\t";
+    cout<<table[i].bg_inode_bitmap<<"\t\t";
+    cout<<table[i].bg_inode_table<<"\t\t";
+    cout<<table[i].bg_free_blocks<<"\t\t";
+    cout<<table[i].bg_free_inodes<<"\t\t";
+    cout<<table[i].bg_dirs_counts<<"\t\t";
+    cout<<endl;
+
+  }
+
    return 0;
 }
 
