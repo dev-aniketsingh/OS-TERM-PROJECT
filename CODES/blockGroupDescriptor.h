@@ -2,7 +2,7 @@
 #define BLOCKGROUPDESCRIPTOR
 #pragma pack(1)
 
-struct blockGroupDescriptorTable{
+struct blockGroupDescriptor{
   uint32_t bg_block_bitmap;
   uint32_t bg_inode_bitmap;
   uint32_t bg_inode_table;
