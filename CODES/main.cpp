@@ -11,6 +11,10 @@
 #include"partitionData.h"
 #include"mbr.h"
 #include"partitionFunctions.h"
+#include"superblock.h"
+#include"superblockFunctions.h"
+#include"blockGroupDescriptor.h"
+#include"ext2File.h"
 using namespace std;
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
@@ -39,6 +43,9 @@ int main(int argc, char* argv[]){
   struct mbrSector mbrData;
   struct dataBlock data;
   file = vdiOpen(argv[1]);
+ /*
+  it reads the vdi header
+ */
   vdiRead(file,&(file->header),sizeof(file->header));
   struct UUID* id= (struct UUID *)malloc(sizeof(struct UUID));
   dumpVDIHeader(file);
@@ -52,6 +59,12 @@ int main(int argc, char* argv[]){
    vdiSeek(file,file->header.frameOffset+mbrData.partitionEntryInfo[0].logicalBlocking*512+1024,SEEK_SET);
    vdiRead(file,&data,sizeof(data));
    displaySuperBlock(file,data,mbrData);
+   /*
+    This reads the super block in located in the partittion
+   */
+  struct ext2File * ext2 = (struct ext2File *) malloc(sizeof(ext2));
+  readSuperBlock(ext2,0,file,mbrData);
+  displaySuperBlock(ext2);
    return 0;
 }
 
