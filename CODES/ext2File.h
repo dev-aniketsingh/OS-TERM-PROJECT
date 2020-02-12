@@ -6,6 +6,6 @@
 
 struct ext2File{
   struct superBlock superblock;
-  struct blockGroupDescriptorTable descriptorTable;
 };
+
 #endif
