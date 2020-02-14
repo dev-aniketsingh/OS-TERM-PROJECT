@@ -17,13 +17,18 @@
 #include<iostream>
 using namespace std;
 
-int readSuperBlock(struct ext2File * ext2,uint32_t blockNumber,struct vdifile*file,struct mbrSector mbr){
+int readSuperBlock(struct ext2File * ext2,uint32_t blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[]){
   /*
-   This only works in the case of fixed vdi file
-  */
-    int finalResult;
-    int offsetToSuperBlock= blockNumber*1024+1024+mbr.partitionEntryInfo[0].logicalBlocking*512+file->header.frameOffset;
-    vdiSeek(file,offsetToSuperBlock,SEEK_SET);
+      This given codes can be used to located the physical page of the vdi dynamic file
+    */
+    int finalResult,
+        physicalPageNumber,
+        offsetToPhysicalPage,
+        physicalAddress;
+    physicalPageNumber= translationMapData[(mbr.partitionEntryInfo[0].logicalBlocking*512+1024)/file->header.frameSize];
+    offsetToPhysicalPage= (mbr.partitionEntryInfo[0].logicalBlocking*512+1024)%file->header.frameSize;
+    physicalAddress= file->header.frameOffset+physicalPageNumber*file->header.frameSize+offsetToPhysicalPage;
+    vdiSeek(file,physicalAddress,SEEK_SET);
     finalResult=vdiRead(file,&(ext2->superblock),sizeof(ext2->superblock));
     if(finalResult!=-1){
       return -1;
@@ -43,8 +48,8 @@ int displaySuperBlock(struct ext2File* ext2){
   cout<<"Blocks per group : "<<std::dec<< ext2->superblock.s_blocks_per_group<<"\n";
   cout<<"Fragments per group : "<<std::dec<< ext2->superblock.s_frags_per_group<<"\n";
   cout<<"Inodes per group : "<<std::dec<< ext2->superblock.s_inodes_per_group<<"\n";
-  cout<<"Last mount time : "<<std::dec<< ext2->superblock.s_mtime<<"\n";
-  cout<<"Last write time : "<<std::dec<< ext2->superblock.s_wtime<<"\n";
+  cout<<"Last mount time : "/*<<std::dec*/<< ext2->superblock.s_mtime<<"\n";
+  cout<<"Last write time : "/*<<std::dec*/<< ext2->superblock.s_wtime<<"\n";
   cout<<"Mount count : "<<std::dec<< ext2->superblock.s_mnt_count<<"\n";
   cout<<"Max mount count : "<<std::dec<< ext2->superblock.s_max_mnt_count<<"\n";
   cout<<"Magic Number : "<<std::hex<< ext2->superblock.s_magic<<"\n";
