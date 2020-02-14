@@ -60,17 +60,32 @@ int main(int argc, char* argv[]){
    vdiRead(file,&data,sizeof(data));
    displaySuperBlock(file,data,mbrData);
    /*
+     It reads the translation map , which can be used to translate the virtual page to physical page in dynamic vdi file
+   */
+   int offsetToTranslationMap,
+       readBytesOfTranslationMap,
+       count=0;
+   int translationMapData[4*file->header.totalFrame];
+   offsetToTranslationMap=vdiSeek(file,file->header.mapOffset,SEEK_SET);
+   readBytesOfTranslationMap= vdiRead(file,translationMapData,sizeof(translationMapData));
+  
+   /*
     This reads the super block in located in the partittion
    */
   struct ext2File * ext2 = (struct ext2File *) malloc(sizeof(ext2));
-  readSuperBlock(ext2,0,file,mbrData);
+  readSuperBlock(ext2,0,file,mbrData,translationMapData);
   displaySuperBlock(ext2);
-  /*offset to superBlock*/
+  /*
+    This given line of codes can be used to read the block group descriptor table data
+  */
   int blockSize= 1024<<(ext2->superblock.s_log_block_size);
   int totalBlockGroup= (ext2->superblock).s_blocks_count/(ext2->superblock).s_blocks_per_group;
   struct blockGroupDescriptor table[totalBlockGroup];
   vdiRead(file,table,sizeof(table));
   cout<<"Block Bit Map"<<"\t"<<"Inode Bitmap"<<"\t"<<"Innode Table"<<"\t"<<"Free Blocks"<<"\t"<<"Free Inodes"<<"\t"<<"Used Directory"<<"\n";
+/*.
+  it can be used to display the content of the group descriptor of the registered block group
+*/
   for(int i=0;i<totalBlockGroup;i++){
     cout<<table[i].bg_block_bitmap<<"\t\t";
     cout<<table[i].bg_inode_bitmap<<"\t\t";
@@ -79,7 +94,6 @@ int main(int argc, char* argv[]){
     cout<<table[i].bg_free_inodes<<"\t\t";
     cout<<table[i].bg_dirs_counts<<"\t\t";
     cout<<endl;
-
   }
 
    return 0;
