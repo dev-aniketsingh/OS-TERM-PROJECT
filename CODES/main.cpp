@@ -15,10 +15,13 @@
 #include"superblockFunctions.h"
 #include"blockGroupDescriptor.h"
 #include"ext2File.h"
+#include"inodeFunctions.h"
+#include"inode.h"
+#include<string>
 using namespace std;
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
-
+void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
 struct UUID {
     uint32_t
         timeLow;
@@ -56,7 +59,8 @@ int main(int argc, char* argv[]){
    mbrSeek(file,file->header.frameOffset,SEEK_SET);
    mbrReadBytes=mbrRead(file,mbrData,sizeof(mbrData));
    displayPartitionInfo(mbrData);
-   vdiSeek(file,file->header.frameOffset+mbrData.partitionEntryInfo[0].logicalBlocking*512+1024,SEEK_SET);
+   int offsetToSuperBlock= file->header.frameOffset+mbrData.partitionEntryInfo[0].logicalBlocking*512+1024;
+   vdiSeek(file,offsetToSuperBlock,SEEK_SET);
    vdiRead(file,&data,sizeof(data));
    displaySuperBlock(file,data,mbrData);
    /*
@@ -68,7 +72,7 @@ int main(int argc, char* argv[]){
    int translationMapData[4*file->header.totalFrame];
    offsetToTranslationMap=vdiSeek(file,file->header.mapOffset,SEEK_SET);
    readBytesOfTranslationMap= vdiRead(file,translationMapData,sizeof(translationMapData));
-  
+
    /*
     This reads the super block in located in the partittion
    */
@@ -79,14 +83,18 @@ int main(int argc, char* argv[]){
     This given line of codes can be used to read the block group descriptor table data
   */
   int blockSize= 1024<<(ext2->superblock.s_log_block_size);
-  int totalBlockGroup= (ext2->superblock).s_blocks_count/(ext2->superblock).s_blocks_per_group;
+  int totalBlockGroup= ((ext2->superblock).s_blocks_count-ext2->superblock.s_first_data_block)/(ext2->superblock).s_blocks_per_group;
+  if(((ext2->superblock).s_blocks_count-ext2->superblock.s_first_data_block)%(ext2->superblock).s_blocks_per_group>0){
+     totalBlockGroup++;
+  }
   struct blockGroupDescriptor table[totalBlockGroup];
   vdiRead(file,table,sizeof(table));
-  cout<<"Block Bit Map"<<"\t"<<"Inode Bitmap"<<"\t"<<"Innode Table"<<"\t"<<"Free Blocks"<<"\t"<<"Free Inodes"<<"\t"<<"Used Directory"<<"\n";
+  cout<<"Block Group NO.\t"<<"Block Bit Map"<<"\t"<<"Inode Bitmap"<<"\t"<<"Innode Table"<<"\t"<<"Free Blocks"<<"\t"<<"Free Inodes"<<"\t"<<"Used Directory"<<"\n";
 /*.
   it can be used to display the content of the group descriptor of the registered block group
 */
   for(int i=0;i<totalBlockGroup;i++){
+    cout<<i<<"\t\t";
     cout<<table[i].bg_block_bitmap<<"\t\t";
     cout<<table[i].bg_inode_bitmap<<"\t\t";
     cout<<table[i].bg_inode_table<<"\t\t";
@@ -95,7 +103,18 @@ int main(int argc, char* argv[]){
     cout<<table[i].bg_dirs_counts<<"\t\t";
     cout<<endl;
   }
-
+  /*
+    This given code is used to read the given inode
+  */
+  struct inode  in;
+  int readInodeBytes;
+  unsigned char inodeMetaData[128];
+  readInodeBytes= fetchInode(ext2,file,table,2,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+  displayInodeMeta(inodeMetaData,2);
+  displayInode(in);
+  fetchInode(ext2,file,table,11,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+  displayInodeMeta(inodeMetaData,11);
+  displayInode(in);
    return 0;
 }
 
@@ -130,4 +149,19 @@ void displayUUID(struct vdifile* file,struct UUID *id){
   vdiRead(file,id,sizeof(struct UUID));
   uuid2ascii(id);
   cout<<"Parent UUID :"<<uuidStr<<"\n";
+}
+void displayInodeMeta(unsigned char * inodeMetaData,int iNum){
+    int j=0;
+    cout<<endl<<"----------------------------------"<<"Inode :"<<iNum<<"--------------------------------------------------------------------------------------"<<endl;
+
+    for(int i=0;i<128;i++){
+      cout<<std::hex<<(int)*(inodeMetaData+i)<<"\t";
+      j++;
+      if(j==16){
+        cout<<endl;
+        j=0;
+      }
+    }
+    cout<<endl<<"------------------------------------------------------------------------------------------------------------------------"<<endl;
+
 }
