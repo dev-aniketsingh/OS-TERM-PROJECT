@@ -16,24 +16,28 @@
 #include"blockGroupDescriptor.h"
 #include<iostream>
 using namespace std;
-
 int readSuperBlock(struct ext2File * ext2,uint32_t blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[]){
   /*
       This given codes can be used to located the physical page of the vdi dynamic file
     */
-    int finalResult,
-        physicalPageNumber,
-        offsetToPhysicalPage,
-        physicalAddress;
-    physicalPageNumber= translationMapData[(mbr.partitionEntryInfo[0].logicalBlocking*512+1024)/file->header.frameSize];
-    offsetToPhysicalPage= (mbr.partitionEntryInfo[0].logicalBlocking*512+1024)%file->header.frameSize;
-    physicalAddress= file->header.frameOffset+physicalPageNumber*file->header.frameSize+offsetToPhysicalPage;
+    int finalResult;
+    int virtualAddress= mbr.partitionEntryInfo[0].logicalBlocking*512+1024;
+    int physicalAddress= actualPage(virtualAddress,file,translationMapData);
     vdiSeek(file,physicalAddress,SEEK_SET);
     finalResult=vdiRead(file,&(ext2->superblock),sizeof(ext2->superblock));
     if(finalResult!=-1){
       return -1;
     }
     return 0;
+}
+int actualPage(int virtualAddress, struct vdifile *file, int translationMapData[]){
+      int physicalPageNumber,
+      offsetToPhysicalPage,
+      physicalAddress;
+  physicalPageNumber= translationMapData[virtualAddress/file->header.frameSize];
+  offsetToPhysicalPage= (virtualAddress)%file->header.frameSize;
+  physicalAddress= file->header.frameOffset+physicalPageNumber*file->header.frameSize+offsetToPhysicalPage;
+  return physicalAddress;
 }
 int displaySuperBlock(struct ext2File* ext2){
   cout<<"Super Block Contents: "<<"\n";
