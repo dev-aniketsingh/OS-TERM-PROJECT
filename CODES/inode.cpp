@@ -78,7 +78,7 @@ void freeInode(int iNum,unsigned char inodeBitMap[]){
     int byteOffset= (iNum-1)/8;
     int offsetIntoByte= 7-(iNum-1)%8;
     int byteData= inodeBitMap[byteOffset];
-    inodeBitMap[byteOffset]= !(byteData>>offsetIntoByte & 0x1);
+    inodeBitMap[byteOffset]= (byteData>>offsetIntoByte ^ 0x1);
 }
 void displayInode(struct inode in){
   cout<<"\n"<<"Mode : "<<std::oct<<in.i_mode<<"\n";
