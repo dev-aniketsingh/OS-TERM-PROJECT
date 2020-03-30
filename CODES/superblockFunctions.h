@@ -7,4 +7,5 @@
 int readSuperBlock(struct ext2File * ext2,uint32_t blockNumber,struct vdifile * file,struct mbrSector mbr,int translationMapData[] );
 int writeSuperBlock(struct ext2File* ext2, uint32_t blockNumber,struct vdifile * file,struct mbrSector mbr);
 int displaySuperBlock(struct ext2File* ext2);
+int actualPage(int virtualAddress, struct vdifile *file, int translationMapData[]);
 #endif
