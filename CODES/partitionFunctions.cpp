@@ -10,18 +10,39 @@
 #include"vdiheader.h"
 #include"vdifunctions.h"
 #include"mbr.h"
+#include<cmath>
 using namespace std;
 
-struct mbrSector * mbrOpen(struct vdifile * file,struct partitionEntry partitionInfo){
-
+struct partitionFile * partitionOpen(struct vdifile * file,struct partitionEntry partitionInfo[]){
+  int changedPosition;
+  struct partitionFile * partition = (struct partitionFile *) malloc(sizeof(struct partitionFile));
+  partition->file= file;
+  partition->file->pointerPosition= file->header.frameOffset+ partitionInfo[0].logicalBlocking*512;
+  changedPosition=vdiSeek(file,partition->file->pointerPosition,SEEK_SET);
+  return partition;
 
 }
 
-void mbrClose(struct mbrSector *f){
-  f=NULL;
-  free(f);
+void partitionClose(struct partitionFile *partition){
+  partition=NULL;
+  free(partition);
 }
 
+int partitionSeek(struct partitionFile *f,int offset,int anchor,struct partitionEntry partitionInfo[]){
+  if(anchor == SEEK_SET && offset<partitionInfo[0].numberOfSectorInPartition*512){
+    lseek(f->file->fileDescriptor,offset,SEEK_SET);
+    return (f->file->pointerPosition+offset);
+  }
+  if(anchor== SEEK_CUR && (SEEK_CUR+offset)<partitionInfo[0].numberOfSectorInPartition*512){
+    lseek(f->file->fileDescriptor, offset,SEEK_CUR);
+    return (f->file->pointerPosition+offset);
+  }
+  if(anchor== SEEK_END && abs(offset)<partitionInfo[0].numberOfSectorInPartition*512 ){
+    lseek(f->file->fileDescriptor,offset,SEEK_END);
+    return (f->file->pointerPosition+offset);
+  }
+
+}
 int mbrRead(struct vdifile *f,struct mbrSector& buf,int count){
   int readBytes=vdiRead(f,&buf,sizeof(buf));
   f->pointerPosition= SEEK_CUR;
@@ -32,12 +53,6 @@ int mbrRead(struct vdifile *f,struct mbrSector& buf,int count){
     cout<<"There are some data that werenot read"<<readBytes<<"\n";
   }
   return readBytes;
-}
-
-int mbrWrite(struct mbrSector *f,void * buf, int count){
-
-
-
 }
 
 int mbrSeek(struct vdifile *f,int offset,int anchor){
