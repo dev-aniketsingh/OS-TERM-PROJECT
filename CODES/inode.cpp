@@ -123,32 +123,25 @@ int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
       if(i->i_block[12]==0){
         return 0;
       }
-      else{
-         buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
-         blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-         bNum= bNum-12;
-      }
-
+      buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      bNum= bNum-12;
   }
   else if(bNum<12+k+pow(k,2)){
       if(i->i_block[13]==0){
         return 0;
       }
-      else{
-        buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
-        blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-        bNum= bNum-12-k;
-      }
+      buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      bNum= bNum-12-k;
   }
   else{
       if(i->i_block[14]==0){
         return 0;
       }
-      else{
-        buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
-        blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-        bNum= bNum-12-k-pow(k,2);
-      }
+      buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      bNum= bNum-12-k-pow(k,2);
   }
   //It can be used to locate double indirect block
   int index= bNum/pow(k,2);
@@ -215,7 +208,7 @@ it is used to write back to the given block number of the file
 */
 bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,int blockSize,struct superBlock sBlock,
                      struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],struct blockGroupDescriptor bg[],
-                     int offsetToSuperBlock){
+                     int offsetToSuperBlock,int * realBuffer){
   int* buffer;
   vector<int>blockList;
   int newBlockNumber;
@@ -225,18 +218,14 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
           i->i_block[bNum]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
           writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      else{
-        blockList.assign(i->i_block,i->i_block+sizeof(i->i_block)/sizeof(i->i_block[0]));
-      }
+      blockList.assign(i->i_block,i->i_block+sizeof(i->i_block)/sizeof(i->i_block[0]));
   }
   else if (bNum<12+k){
       if(i->i_block[12]==0){
         i->i_block[12]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      else{
-        buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
-      }
+      buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       newBlockNumber= i->i_block[12];
       bNum= bNum-12;
@@ -246,9 +235,7 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
         i->i_block[13]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      else{
-        buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
-      }
+      buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
       newBlockNumber=i->i_block[13];
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k;
@@ -258,9 +245,8 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
         i->i_block[14]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      else{
-        buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
-      }
+
+      buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
       newBlockNumber= i->i_block[14];
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k-pow(k,2);
@@ -273,11 +259,9 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
     *(buffer+index)= blockList[index];
     writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
   }
-  else{
-    newBlockNumber=blockList[index];
-    buffer=fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-    blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-  }
+  newBlockNumber=blockList[index];
+  buffer=fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
+  blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
   //In order to access single indirect blocks
   index= offsetInto/k;
   offsetInto= offsetInto%k;
@@ -286,22 +270,18 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
     *(buffer+index)= blockList[index];
     writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
   }
-  else{
-    newBlockNumber=blockList[index];
-    buffer= fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-    blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-  }
+  newBlockNumber=blockList[index];
+  buffer= fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
+  blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+
   //Finally it can be used to locate direct block of the file
-  if(blockList[index]==0){
+  if(blockList[offsetInto]==0){
     blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
     *(buffer+index)= blockList[index];
     writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
   }
-  else{
-    bool isDone=writeBlock(ext2,blockList[index],file,mbr,translationMapData,buffer);
-    return isDone;
-  }
-  return false;
+  bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
+  return isDone;
 }
 /*
 This functioin can be used to write the given read inode to the given block numberOfSectorInPartition
