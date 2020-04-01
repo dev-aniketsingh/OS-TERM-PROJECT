@@ -20,7 +20,6 @@ struct partitionFile * partitionOpen(struct vdifile * file,struct partitionEntry
   partition->file->pointerPosition= file->header.frameOffset+ partitionInfo[0].logicalBlocking*512;
   changedPosition=vdiSeek(file,partition->file->pointerPosition,SEEK_SET);
   return partition;
-
 }
 
 void partitionClose(struct partitionFile *partition){
