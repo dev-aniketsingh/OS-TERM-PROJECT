@@ -32,9 +32,16 @@ int fetchInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescripto
         offsetToGivenInode;
     blockSize=1024<<f->superblock.s_log_block_size;
     blockGroupNumber= (iNum-1)/f->superblock.s_inodes_per_group;
+    if(blockSize==1024){
     offsetToGivenInode=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
                       (bg[blockGroupNumber].bg_inode_table-1-blockGroupNumber*f->superblock.s_blocks_per_group)*
                       (blockSize)+((iNum-1)%f->superblock.s_inodes_per_group)*f->superblock.s_inode_size;
+    }
+    if(blockSize==4096){
+      offsetToGivenInode=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
+                        (bg[blockGroupNumber].bg_inode_table-blockGroupNumber*f->superblock.s_blocks_per_group)*
+                        (blockSize)+((iNum-1)%f->superblock.s_inodes_per_group)*f->superblock.s_inode_size;
+    }
     int physicalAddress= actualPage(offsetToGivenInode,vdi,translationMapData);
     vdiSeek(vdi,physicalAddress,SEEK_SET);
     readInodeBytes= vdiRead(vdi,&in,sizeof(in));
@@ -71,8 +78,14 @@ unsigned char * fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct
       offsetInodeBitMap;
   blockSize=1024<<f->superblock.s_log_block_size;
   blockGroupNumber= (iNum-1)/f->superblock.s_inodes_per_group;
-  offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock+
+  if(blockSize==1024){
+    offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
                     (bg[blockGroupNumber].bg_inode_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+  }
+  if(blockSize==4096){
+    offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
+                    (bg[blockGroupNumber].bg_inode_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+  }
   unsigned char inodeBitMap[blockSize];
   int physicalAddress= actualPage(offsetInodeBitMap,vdi,translationMapData);
   vdiSeek(vdi,physicalAddress,SEEK_SET);
@@ -100,67 +113,85 @@ void freeInode(int iNum,unsigned char inodeBitMap[]){
 /*
 it fetches the given block number
 */
-int * fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k){
-  int offsetToGivenBlock= file->header.frameOffset+mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockNumber*1024;
+ void fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k,int buffer[]){
+  int offsetToGivenBlock= file->header.frameOffset+mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*(1024<<ext2->superblock.s_log_block_size);
   int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
-  int buffer[k];
   vdiSeek(file,physicalAddress,SEEK_SET);
   vdiRead(file,buffer,4*k);
-  return buffer;
 }
 /*
 it helps to fetch the given block from file
 */
 int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
                        struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[]){
-  vector<int>blockList ;
+  vector<int>blockList;
   int k= (1024<<sBlock.s_log_block_size)/4;
-  int* buffer;
+  int buffer[k],
+      index,
+      offsetInto;
   if(bNum<12){
-      blockList.assign(i->i_block,i->i_block+sizeof(i->i_block)/sizeof(i->i_block[0]));
+     int totalSize=(sizeof(i->i_block)/sizeof((i->i_block)[0]));
+     for(int x: i->i_block)
+     blockList.push_back(x);
+     fetchBlock(ext2,blockList[bNum],file,mbr,translationMapData,k,buffer);
+     return blockList[bNum];
   }
   else if (bNum<12+k){
       if(i->i_block[12]==0){
         return 0;
       }
-      buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
+      fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12;
+      index= bNum%k;
+      if(blockList[index]!=0){
+        fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+        return blockList[index];
+      }
   }
   else if(bNum<12+k+pow(k,2)){
       if(i->i_block[13]==0){
         return 0;
       }
-      buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
+      fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k;
+      index= bNum/k;
+      offsetInto= bNum%k;
+      if(blockList[index] !=0){
+          fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+          blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      }
+      //Finally it can be used to locate direct block of the file
+      if(blockList[offsetInto]!=0){
+        fetchBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,k,buffer);
+        return blockList[offsetInto];
+      }
   }
   else{
       if(i->i_block[14]==0){
         return 0;
       }
-      buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
+      fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k-pow(k,2);
-  }
-  //It can be used to locate double indirect block
-  int index= bNum/pow(k,2);
-  int offsetInto= bNum%(k*k) ;
-  if(blockList[index] !=0){
-    buffer=fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-    blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-  }
-  //In order to access single indirect blocks
-  index= offsetInto/k;
-  offsetInto= offsetInto%k;
-  if(blockList[index] !=0){
-    buffer= fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-    blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-  }
-  //Finally it can be used to locate direct block of the file
-  if(blockList[index]!=0){
-    buffer= fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-    return blockList[index];
+      index= bNum/pow(k,2);
+      offsetInto= bNum%(k*k) ;
+      if(blockList[index] !=0){
+          fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+          blockList.assign(buffer,buffer+(sizeof(buffer)/sizeof(buffer[0])));
+      }
+      index= offsetInto/k;
+      offsetInto= offsetInto%k;
+      if(blockList[index] !=0){
+          fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+          blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      }
+      //Finally it can be used to locate direct block of the file
+      if(blockList[offsetInto]!=0){
+        fetchBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,k,buffer);
+        return blockList[offsetInto];
+      }
   }
 }
 /*
@@ -174,8 +205,14 @@ int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescri
         offsetBlockBitMap;
     blockSize=1024<<f->superblock.s_log_block_size;
     blockGroupNumber= iBlockNumber/f->superblock.s_blocks_per_group;
-    offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock+
+    if(blockSize==1024){
+      offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
                       (bg[blockGroupNumber].bg_block_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+    }
+    if(blockSize==4096){
+      offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
+                      (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+    }
     unsigned char blockBitMap[blockSize];
     int physicalAddress= actualPage(offsetBlockBitMap,vdi,translationMapData);
     vdiSeek(vdi,offsetBlockBitMap,SEEK_SET);
@@ -209,36 +246,70 @@ it is used to write back to the given block number of the file
 bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,int blockSize,struct superBlock sBlock,
                      struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],struct blockGroupDescriptor bg[],
                      int offsetToSuperBlock,int * realBuffer){
-  int* buffer;
   vector<int>blockList;
   int newBlockNumber;
   int k= (1024<<sBlock.s_log_block_size)/4;
+  int buffer[k],
+      index,
+      offsetInto;
   if(bNum<12){
       if(i->i_block[bNum]==0){
           i->i_block[bNum]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
           writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
       blockList.assign(i->i_block,i->i_block+sizeof(i->i_block)/sizeof(i->i_block[0]));
+      bool isDone=writeBlock(ext2,blockList[bNum],file,mbr,translationMapData,realBuffer);
+      return isDone;
   }
   else if (bNum<12+k){
       if(i->i_block[12]==0){
         i->i_block[12]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      buffer=fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k);
+      fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       newBlockNumber= i->i_block[12];
       bNum= bNum-12;
+      index= bNum%k;
+      if(blockList[index] ==0){
+        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+index)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      newBlockNumber=blockList[index];
+      fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      bool isDone=writeBlock(ext2,blockList[index],file,mbr,translationMapData,realBuffer);
+      return isDone;
   }
   else if(bNum<12+k+pow(k,2)){
       if(i->i_block[13]==0){
         i->i_block[13]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
-      buffer=fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k);
+      fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k,buffer);
       newBlockNumber=i->i_block[13];
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k;
+      index= offsetInto/k;
+      offsetInto= offsetInto%k;
+      if(blockList[index] ==0){
+        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+index)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      newBlockNumber=blockList[index];
+      fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+
+      //Finally it can be used to locate direct block of the file
+      if(blockList[offsetInto]==0){
+        blockList[offsetInto]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+offsetInto)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
+      return isDone;
   }
   else{
       if(i->i_block[14]==0){
@@ -246,42 +317,41 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
 
-      buffer= fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k);
+      fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k,buffer);
       newBlockNumber= i->i_block[14];
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
       bNum= bNum-12-k-pow(k,2);
-  }
-  //It can be used to locate double indirect block
-  int index= bNum/pow(k,2);
-  int offsetInto= bNum%(k*k) ;
-  if(blockList[index] ==0){
-    blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
-    *(buffer+index)= blockList[index];
-    writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
-  }
-  newBlockNumber=blockList[index];
-  buffer=fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-  blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-  //In order to access single indirect blocks
-  index= offsetInto/k;
-  offsetInto= offsetInto%k;
-  if(blockList[index] ==0){
-    blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
-    *(buffer+index)= blockList[index];
-    writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
-  }
-  newBlockNumber=blockList[index];
-  buffer= fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k);
-  blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      index= bNum/pow(k,2);
+      offsetInto= bNum%(k*k) ;
+      if(blockList[index] ==0){
+        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+index)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      newBlockNumber=blockList[index];
+      fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
+      //In order to access single indirect blocks
+      index= offsetInto/k;
+      offsetInto= offsetInto%k;
+      if(blockList[index] ==0){
+        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+index)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      newBlockNumber=blockList[index];
+      fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
+      blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
 
-  //Finally it can be used to locate direct block of the file
-  if(blockList[offsetInto]==0){
-    blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
-    *(buffer+index)= blockList[index];
-    writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      //Finally it can be used to locate direct block of the file
+      if(blockList[offsetInto]==0){
+        blockList[offsetInto]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        *(buffer+offsetInto)= blockList[index];
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+      }
+      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
+      return isDone;
   }
-  bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
-  return isDone;
 }
 /*
 This functioin can be used to write the given read inode to the given block numberOfSectorInPartition
@@ -294,9 +364,16 @@ bool writeInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescript
         offsetToGivenInode;
     blockSize=1024<<f->superblock.s_log_block_size;
     blockGroupNumber= (iNum-1)/f->superblock.s_inodes_per_group;
-    offsetToGivenInode=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
+    if(blockSize==1024){
+      offsetToGivenInode=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
                        (bg[blockGroupNumber].bg_inode_table-1-blockGroupNumber*f->superblock.s_blocks_per_group)*
                        (blockSize)+((iNum-1)%f->superblock.s_inodes_per_group)*f->superblock.s_inode_size;
+    }
+    if(blockSize==4096){
+      offsetToGivenInode=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
+                       (bg[blockGroupNumber].bg_inode_table-blockGroupNumber*f->superblock.s_blocks_per_group)*
+                       (blockSize)+((iNum-1)%f->superblock.s_inodes_per_group)*f->superblock.s_inode_size;
+    }
     int physicalAddress= actualPage(offsetToGivenInode,vdi,translationMapData);
     vdiSeek(vdi,physicalAddress,SEEK_SET);
     int bytesWritten=write(vdi->fileDescriptor,in,sizeof(struct inode));
