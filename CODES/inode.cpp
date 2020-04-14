@@ -419,7 +419,7 @@ void displayInode(struct inode in){
 This function can be used to write to blocks
 */
 bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int *buffer){
-  int offsetToGivenBlock= file->header.frameOffset+mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockNumber*1024;
+  int offsetToGivenBlock= mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockNumber*1024;
   int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
   vdiSeek(file,physicalAddress,SEEK_SET);
   int writeBytes= write(file->fileDescriptor,buffer,1024);
