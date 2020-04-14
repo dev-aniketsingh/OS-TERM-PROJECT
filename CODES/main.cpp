@@ -126,11 +126,11 @@ int main(int argc, char* argv[]){
   */
   int blockNumber=fetchBlockFromFile(&in,14,ext2->superblock,ext2,file,mbrData,translationMapData);
   if(blockNumber!=0){
-    unsigned char buff[1024];
-    int offsetToGivenBlock=mbrData.partitionEntryInfo[0].logicalBlocking*512+blockNumber*1024;
+    unsigned char buff[blockSize];
+    int offsetToGivenBlock=mbrData.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockSize;
     int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
     vdiSeek(file,physicalAddress,SEEK_SET);
-    vdiRead(file,buff,1024);
+    vdiRead(file,buff,blockSize);
     int count=0;
     cout<<"Block No. 14 from the File"<<endl;
     for(unsigned char x: buff){
