@@ -21,7 +21,7 @@ bool writeInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescript
                 struct inode* in,int offsetToSuperBlock,int translationMapData[]);
 int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
                        struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[]);
-int * fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k);
+void fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k,int buffer[]);
 bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,int blockSize,struct superBlock sBlock,
                      struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],struct blockGroupDescriptor bg[],
                      int offsetToSuperBlock,int * readBuffer);
