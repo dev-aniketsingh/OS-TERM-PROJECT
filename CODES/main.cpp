@@ -125,6 +125,7 @@ int main(int argc, char* argv[]){
   This given lines code can be used to fetch the data block inside the file
   */
   int blockNumber=fetchBlockFromFile(&in,14,ext2->superblock,ext2,file,mbrData,translationMapData);
+  //cout << blockNumber << " This is BLOCK number" << endl;
   if(blockNumber!=0){
     unsigned char buff[blockSize];
     int offsetToGivenBlock=mbrData.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockSize;

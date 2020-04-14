@@ -114,7 +114,7 @@ void freeInode(int iNum,unsigned char inodeBitMap[]){
 it fetches the given block number
 */
  void fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k,int buffer[]){
-  int offsetToGivenBlock= file->header.frameOffset+mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*(1024<<ext2->superblock.s_log_block_size);
+  int offsetToGivenBlock= mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*(1024<<ext2->superblock.s_log_block_size);
   int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
   vdiSeek(file,physicalAddress,SEEK_SET);
   vdiRead(file,buffer,4*k);
