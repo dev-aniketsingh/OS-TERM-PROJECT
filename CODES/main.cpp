@@ -18,11 +18,12 @@
 #include"inodeFunctions.h"
 #include"inode.h"
 #include<string>
+#include<vector>
 using namespace std;
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
 void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
-struct UUID {
+struct __attribute__((packed)) UUID {
     uint32_t
         timeLow;
     uint16_t
@@ -50,9 +51,9 @@ int main(int argc, char* argv[]){
   it reads the vdi header
  */
   vdiRead(file,&(file->header),sizeof(file->header));
-  struct UUID* id= (struct UUID *)malloc(sizeof(struct UUID));
+  struct UUID id;
   dumpVDIHeader(file);
-  displayUUID(file,id);
+  displayUUID(file,&id);
   displayTranslationMap(file);
 
    /* Change the position of file descriptor pointer and read the mbr data*/
@@ -76,7 +77,8 @@ int main(int argc, char* argv[]){
    /*
     This reads the super block in located in the partittion
    */
-  struct ext2File * ext2 = (struct ext2File *) malloc(sizeof(ext2));
+  struct ext2File ex;
+  struct ext2File * ext2 = &ex;
   readSuperBlock(ext2,0,file,mbrData,translationMapData);
   displaySuperBlock(ext2);
   /*
@@ -88,6 +90,10 @@ int main(int argc, char* argv[]){
      totalBlockGroup++;
   }
   struct blockGroupDescriptor table[totalBlockGroup];
+  if(blockSize==4096){
+    int offsetToBlockGroup= offsetToSuperBlock-1024+blockSize;
+    vdiSeek(file,offsetToBlockGroup,SEEK_SET);
+  }
   vdiRead(file,table,sizeof(table));
   cout<<"Block Group NO.\t"<<"Block Bit Map"<<"\t"<<"Inode Bitmap"<<"\t"<<"Innode Table"<<"\t"<<"Free Blocks"<<"\t"<<"Free Inodes"<<"\t"<<"Used Directory"<<"\n";
 /*.
@@ -112,10 +118,31 @@ int main(int argc, char* argv[]){
   readInodeBytes= fetchInode(ext2,file,table,2,in,offsetToSuperBlock,translationMapData,inodeMetaData);
   displayInodeMeta(inodeMetaData,2);
   displayInode(in);
-  fetchInode(ext2,file,table,11,in,offsetToSuperBlock,translationMapData,inodeMetaData);
-  displayInodeMeta(inodeMetaData,11);
+  fetchInode(ext2,file,table,12,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+  displayInodeMeta(inodeMetaData,12);
   displayInode(in);
-   return 0;
+  /*
+  This given lines code can be used to fetch the data block inside the file
+  */
+  int blockNumber=fetchBlockFromFile(&in,14,ext2->superblock,ext2,file,mbrData,translationMapData);
+  if(blockNumber!=0){
+    unsigned char buff[1024];
+    int offsetToGivenBlock=mbrData.partitionEntryInfo[0].logicalBlocking*512+blockNumber*1024;
+    int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
+    vdiSeek(file,physicalAddress,SEEK_SET);
+    vdiRead(file,buff,1024);
+    int count=0;
+    cout<<"Block No. 14 from the File"<<endl;
+    for(unsigned char x: buff){
+      cout<<std::hex<<(int)x<<"\t";
+      count++;
+      if(count==16){
+        cout<<endl;
+        count=0;
+      }
+    }
+  }
+  return 0;
 }
 
 static char *uuid2ascii(struct UUID *uuid) {
