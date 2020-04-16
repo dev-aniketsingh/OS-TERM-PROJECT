@@ -15,22 +15,18 @@
 #include"blockGroupDescriptor.h"
 #include"ext2File.h"
 #include"inode.h"
-int fetchInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iNum,
-               struct inode& in,int offsetToSuperBlock,int translationMapData[],unsigned char inodeMetaData[]);
-bool writeInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iNum,
-                struct inode* in,int offsetToSuperBlock,int translationMapData[]);
-int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
-                       struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[]);
-void fetchBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int k,int buffer[]);
-bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,int blockSize,struct superBlock sBlock,
-                     struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],struct blockGroupDescriptor bg[],
-                     int offsetToSuperBlock,int * readBuffer);
-bool inodeInUse(struct ext2File *f,unsigned char inodeBitMap[]);
-void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[]);
-void freeInode(int iNum,unsigned char inodeBitMap[]);
-unsigned char * fetchInodeBitMap(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iNum,
-                                 int offsetToSuperBlock,int translationMapData[]);
+#include"directoryEntry.h"
+
+bool fetchInode(struct ext2File*,struct vdifile*,struct blockGroupDescriptor[], uint32_t,struct inode&,int,int[],unsigned char[]);
+bool writeInode(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,struct inode*,int,int[]);
+bool fetchBlockFromFile(struct inode *, int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,int[],char*);
+void fetchBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int,int[]);
+bool writeBlockToFile(struct inode *, int,int,int,int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,
+                      int[],struct blockGroupDescriptor[],int,int *);
+bool inodeInUse(struct ext2File *,unsigned char []);
+void allocateInode(int & ,unsigned char []);
+void freeInode(int,unsigned char[]);
+unsigned char * fetchInodeBitMap(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[]);
 void displayInode(struct inode in);
-int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iBlockNumber,
-                  int offsetToSuperBlock,int translationMapData[]);
-bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int *buffer);
+int allocateBlock(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[]);
+bool writeBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int *);
