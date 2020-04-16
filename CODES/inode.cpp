@@ -5,6 +5,9 @@
 #include<stdio.h>
 #include <fstream>
 #include<iostream>
+#include<string>
+#include<cstring>
+#include<cstdint>
 #include"vdiheader.h"
 #include"vdifile.h"
 #include"vdifunctions.h"
@@ -16,15 +19,14 @@
 #include"blockGroupDescriptor.h"
 #include"ext2File.h"
 #include"inodeFunctions.h"
-#include<string>
 #include<vector>
-#include<algorithm>
 #include<cmath>
+#include"directoryEntry.h"
 using namespace std;
 /*
 This funtion is used to fetch the inode contained in the inode table
 */
-int fetchInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iNum,
+bool fetchInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iNum,
                struct inode& in,int offsetToSuperBlock,int translationMapData[],unsigned char inodeMetaData[]){
     int readInodeBytes,
         blockSize,
@@ -47,7 +49,10 @@ int fetchInode(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescripto
     readInodeBytes= vdiRead(vdi,&in,sizeof(in));
     vdiSeek(vdi,physicalAddress,SEEK_SET);
     vdiRead(vdi,inodeMetaData,128);
-    return offsetToGivenInode;
+    if(readInodeBytes==sizeof(in)){
+      return true;
+    }
+    return false;
 }
 /*
 checks whether or not inode is in used
@@ -122,10 +127,12 @@ it fetches the given block number
 /*
 it helps to fetch the given block from file
 */
-int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
-                       struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[]){
+bool fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
+                       struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],char* buff){
   vector<int>blockList;
+  int blockSize= (1024<<sBlock.s_log_block_size);
   int k= (1024<<sBlock.s_log_block_size)/4;
+  int offsetToGivenBlock,physicalAddress,realBlockNumber=0;
   int buffer[k],
       index,
       offsetInto;
@@ -134,11 +141,11 @@ int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
      for(int x: i->i_block)
      blockList.push_back(x);
      fetchBlock(ext2,blockList[bNum],file,mbr,translationMapData,k,buffer);
-     return blockList[bNum];
+     realBlockNumber= blockList[bNum];
   }
   else if (bNum<12+k){
       if(i->i_block[12]==0){
-        return 0;
+        return false;
       }
       fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
@@ -146,12 +153,12 @@ int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
       index= bNum%k;
       if(blockList[index]!=0){
         fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
-        return blockList[index];
+        realBlockNumber= blockList[index];
       }
   }
   else if(bNum<12+k+pow(k,2)){
       if(i->i_block[13]==0){
-        return 0;
+        return false;
       }
       fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
@@ -165,12 +172,12 @@ int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
       //Finally it can be used to locate direct block of the file
       if(blockList[offsetInto]!=0){
         fetchBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,k,buffer);
-        return blockList[offsetInto];
+        realBlockNumber= blockList[offsetInto];
       }
   }
   else{
       if(i->i_block[14]==0){
-        return 0;
+        return false;
       }
       fetchBlock(ext2,i->i_block[14],file,mbr,translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
@@ -189,10 +196,17 @@ int fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
       }
       //Finally it can be used to locate direct block of the file
       if(blockList[offsetInto]!=0){
-        fetchBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,k,buffer);
-        return blockList[offsetInto];
+        realBlockNumber= blockList[offsetInto];
       }
   }
+  if(realBlockNumber !=0){
+    offsetToGivenBlock=mbr.partitionEntryInfo[0].logicalBlocking*512+realBlockNumber*blockSize;
+    physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
+    vdiSeek(file,physicalAddress,SEEK_SET);
+    int readBytes=vdiRead(file,buff,sizeof(buff));
+    if(readBytes==blockSize) return true;
+  }
+  return false;
 }
 /*
 This function can be used to allocate the blocks
@@ -432,4 +446,22 @@ bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struc
     return false;
   }
 
+}
+int fetchDirectoryEntry(struct Entry & directory, char buff[],string fileName,struct inode in,int blockSize,int bNum){
+  int remainingSpace= in.i_size-bNum*blockSize;
+  if(remainingSpace>=blockSize){
+    remainingSpace= blockSize;
+  }
+  int offset=0;
+  while(offset<remainingSpace){
+    memcpy(&directory,buff+offset,blockSize);
+    char name[directory.nameLength+1];
+    memcpy(name, directory.name,directory.nameLength);
+    name[directory.nameLength]='\0';
+    if((string)name== fileName){
+      return 0;
+    }
+    offset += directory.recordLength;
+  }
+  return 1;
 }
