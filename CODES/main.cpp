@@ -156,26 +156,22 @@ int main(int argc, char* argv[]){
         cout<<"Entered Here";
         totalBlocksInFile= (in.i_size/blockSize);
         if(in.i_size%blockSize !=0) totalBlocksInFile ++;
-        for(int j=0;j<totalBlocksInFile;j++){
-          if(fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff)){
+          for(int j=0;j<totalBlocksInFile;j++){
+            bool isIt=fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
             remainingSpace= in.i_size-j*blockSize;
             if(remainingSpace>=blockSize) remainingSpace= blockSize;
             size=0;
             while(size<remainingSpace){
-              memcpy(tempDirectory,buff+size,sizeof(buff));
-              char fileName[tempDirectory->nameLength+1];
-              memcpy(fileName,tempDirectory->name, tempDirectory->nameLength);
-              fileName[tempDirectory->nameLength]='\0';
-              //cout<<fileName<<endl;
+            memcpy(tempDirectory,buff+size,sizeof(buff));
+            char fileName[tempDirectory->nameLength+1];
+            memcpy(fileName,tempDirectory->name, tempDirectory->nameLength);
+            fileName[tempDirectory->nameLength]='\0';
+            //cout<<fileName<<endl;
             }
-          }
-        }
+         }
       }
       free(tempDirectory);
     }
-
-
-
   }
   return 0;
 }
