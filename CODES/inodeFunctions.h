@@ -19,7 +19,7 @@
 
 bool fetchInode(struct ext2File*,struct vdifile*,struct blockGroupDescriptor[], uint32_t,struct inode&,int,int[],unsigned char[]);
 bool writeInode(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,struct inode*,int,int[]);
-bool fetchBlockFromFile(struct inode *, int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,int[],char*);
+bool fetchBlockFromFile(struct inode *, int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,int[],unsigned char[]);
 void fetchBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int,int[]);
 bool writeBlockToFile(struct inode *, int,int,int,int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,
                       int[],struct blockGroupDescriptor[],int,int *);
