@@ -128,7 +128,7 @@ it fetches the given block number
 it helps to fetch the given block from file
 */
 bool fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
-                       struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],char* buff){
+                       struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],unsigned char buff[]){
   vector<int>blockList;
   int blockSize= (1024<<sBlock.s_log_block_size);
   int k= (1024<<sBlock.s_log_block_size)/4;
@@ -200,10 +200,10 @@ bool fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
       }
   }
   if(realBlockNumber !=0){
-    offsetToGivenBlock=mbr.partitionEntryInfo[0].logicalBlocking*512+realBlockNumber*blockSize;
+    offsetToGivenBlock=mbr.partitionEntryInfo[0].logicalBlocking*512+(realBlockNumber*blockSize);
     physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
     vdiSeek(file,physicalAddress,SEEK_SET);
-    int readBytes=vdiRead(file,buff,sizeof(buff));
+    int readBytes=vdiRead(file,buff,blockSize);
     if(readBytes==blockSize) return true;
   }
   return false;
@@ -446,22 +446,4 @@ bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struc
     return false;
   }
 
-}
-int fetchDirectoryEntry(struct Entry & directory, char buff[],string fileName,struct inode in,int blockSize,int bNum){
-  int remainingSpace= in.i_size-bNum*blockSize;
-  if(remainingSpace>=blockSize){
-    remainingSpace= blockSize;
-  }
-  int offset=0;
-  while(offset<remainingSpace){
-    memcpy(&directory,buff+offset,blockSize);
-    char name[directory.nameLength+1];
-    memcpy(name, directory.name,directory.nameLength);
-    name[directory.nameLength]='\0';
-    if((string)name== fileName){
-      return 0;
-    }
-    offset += directory.recordLength;
-  }
-  return 1;
 }
