@@ -16,10 +16,12 @@
 #include"blockGroupDescriptor.h"
 #include"ext2File.h"
 #include"inodeFunctions.h"
+#include"directoryEntry.h"
 #include"inode.h"
-#include<string>
+#include<cstring>
 #include<vector>
 using namespace std;
+int fetchDirectoryEntry(struct Entry &,char[],string,struct inode,int,int);
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
 void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
@@ -115,33 +117,65 @@ int main(int argc, char* argv[]){
   struct inode  in;
   int readInodeBytes;
   unsigned char inodeMetaData[128];
-  readInodeBytes= fetchInode(ext2,file,table,2,in,offsetToSuperBlock,translationMapData,inodeMetaData);
-  displayInodeMeta(inodeMetaData,2);
-  displayInode(in);
   fetchInode(ext2,file,table,12,in,offsetToSuperBlock,translationMapData,inodeMetaData);
   displayInodeMeta(inodeMetaData,12);
+  displayInode(in);
+  fetchInode(ext2,file,table,2,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+  displayInodeMeta(inodeMetaData,2);
   displayInode(in);
   /*
   This given lines code can be used to fetch the data block inside the file
   */
-  int blockNumber=fetchBlockFromFile(&in,14,ext2->superblock,ext2,file,mbrData,translationMapData);
-  //cout << blockNumber << " This is BLOCK number" << endl;
-  if(blockNumber!=0){
-    unsigned char buff[blockSize];
-    int offsetToGivenBlock=mbrData.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockSize;
-    int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
-    vdiSeek(file,physicalAddress,SEEK_SET);
-    vdiRead(file,buff,blockSize);
-    int count=0;
-    cout<<"Block No. 14 from the File"<<endl;
-    for(unsigned char x: buff){
-      cout<<std::hex<<(int)x<<"\t";
-      count++;
-      if(count==16){
-        cout<<endl;
-        count=0;
-      }
+  char buff[blockSize];
+  int isFetched,totalBlocksInFile,
+      remainingSpace,size;
+  struct Entry currentDirectory;
+  int rootDirectorySize= (in.i_size)/blockSize;
+  if(in.i_size%blockSize !=0){
+    rootDirectorySize++;
+  }
+  for(int i=0;i<rootDirectorySize;i++){
+    fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+    isFetched= fetchDirectoryEntry(currentDirectory,buff,".",in,blockSize,i);
+    if(isFetched==0){
+      break;
     }
+  }
+  if(isFetched ==1){
+    cout<<"We couln't get the given directory"<<endl;
+  }
+  string ext2Path="",
+         command;
+  bool run=true;
+  while(run){
+    cout<<"/"<<ext2Path;
+    getline(cin,command);
+    if(command=="ls"){
+      struct Entry* tempDirectory= (struct Entry *) malloc(sizeof(struct Entry));
+      if(fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
+        cout<<"Entered Here";
+        totalBlocksInFile= (in.i_size/blockSize);
+        if(in.i_size%blockSize !=0) totalBlocksInFile ++;
+        for(int j=0;j<totalBlocksInFile;j++){
+          if(fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff)){
+            remainingSpace= in.i_size-j*blockSize;
+            if(remainingSpace>=blockSize) remainingSpace= blockSize;
+            size=0;
+            while(size<remainingSpace){
+              memcpy(tempDirectory,buff+size,sizeof(buff));
+              char fileName[tempDirectory->nameLength+1];
+              memcpy(fileName,tempDirectory->name, tempDirectory->nameLength);
+              fileName[tempDirectory->nameLength]='\0';
+              //cout<<fileName<<endl;
+            }
+          }
+        }
+      }
+      free(tempDirectory);
+    }
+
+
+
   }
   return 0;
 }
