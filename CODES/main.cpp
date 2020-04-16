@@ -5,6 +5,7 @@
 #include<stdio.h>
 #include <fstream>
 #include<iostream>
+#include<stack>
 #include"vdiheader.h"
 #include"vdifile.h"
 #include"vdifunctions.h"
@@ -21,7 +22,7 @@
 #include<cstring>
 #include<vector>
 using namespace std;
-int fetchDirectoryEntry(struct Entry &,char[],string,struct inode,int,int);
+int fetchDirectoryEntry(struct Entry &,unsigned char[],string,struct inode,int,int);
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
 void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
@@ -126,10 +127,11 @@ int main(int argc, char* argv[]){
   /*
   This given lines code can be used to fetch the data block inside the file
   */
-  char buff[blockSize];
+  unsigned char buff[blockSize];
   int isFetched,totalBlocksInFile,
       remainingSpace,size;
   struct Entry currentDirectory;
+  stack<struct Entry>* directories= new stack<struct Entry>();
   int rootDirectorySize= (in.i_size)/blockSize;
   if(in.i_size%blockSize !=0){
     rootDirectorySize++;
@@ -137,42 +139,77 @@ int main(int argc, char* argv[]){
   for(int i=0;i<rootDirectorySize;i++){
     fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
     isFetched= fetchDirectoryEntry(currentDirectory,buff,".",in,blockSize,i);
+    directories->push(currentDirectory);
     if(isFetched==0){
       break;
     }
   }
   if(isFetched ==1){
-    cout<<"We couln't get the given directory"<<endl;
+    cout<<"Unable to open the directory file "<<endl;
   }
-  string ext2Path="",
-         command;
-  bool run=true;
-  while(run){
+  bool run= true,isIt= false;
+  string ext2Path="",command;
+ while(run){
     cout<<"/"<<ext2Path;
     getline(cin,command);
     if(command=="ls"){
-      struct Entry* tempDirectory= (struct Entry *) malloc(sizeof(struct Entry));
+      struct Entry * tempDirectory= (struct Entry * ) malloc(sizeof(struct Entry));
       if(fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
-        cout<<"Entered Here";
-        totalBlocksInFile= (in.i_size/blockSize);
-        if(in.i_size%blockSize !=0) totalBlocksInFile ++;
-          for(int j=0;j<totalBlocksInFile;j++){
-            bool isIt=fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
-            remainingSpace= in.i_size-j*blockSize;
-            if(remainingSpace>=blockSize) remainingSpace= blockSize;
-            size=0;
-            while(size<remainingSpace){
-            memcpy(tempDirectory,buff+size,sizeof(buff));
-            char fileName[tempDirectory->nameLength+1];
-            memcpy(fileName,tempDirectory->name, tempDirectory->nameLength);
-            fileName[tempDirectory->nameLength]='\0';
-            //cout<<fileName<<endl;
-            }
-         }
+        totalBlocksInFile= in.i_size/blockSize;
+        if(in.i_size%blockSize !=0) totalBlocksInFile++;
+        for(int j=0;j<totalBlocksInFile;j++){
+          isIt= fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+          size=0;
+          remainingSpace= in.i_size -j*blockSize;
+          if(remainingSpace>=blockSize) remainingSpace= blockSize;
+          while(size<remainingSpace){
+              memcpy(tempDirectory,buff+size,sizeof(struct Entry));
+              char fileName[tempDirectory->nameLength+1];
+              memcpy(fileName,tempDirectory->name,tempDirectory->nameLength);
+              fileName[tempDirectory->nameLength]='\0';
+              cout<<fileName<<"\n";
+              size+= tempDirectory->recordLength;
+          }
+       }
       }
       free(tempDirectory);
     }
-  }
+    else if(command =="cd"){
+      int length= directories->top().nameLength;
+      directories->pop();
+      if(directories->empty()){
+        cout<<"You are at the root directory"<<"\n";
+      }
+      else{
+        currentDirectory= directories->top();
+        ext2Path= ext2Path.substr(0,ext2Path.length()-length-1);
+      }
+    }
+    else if(command.length()>3 && command.compare(0,2,"cd ")){
+      string destDirectory= command.substr(3,command.length()-3);
+      currentDirectory= directories->top();
+        fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+        totalBlocksInFile= in.i_size/ blockSize;
+        if(in.i_size% blockSize !=0) totalBlocksInFile++;
+        for(int k=0;k<totalBlocksInFile;k++){
+          isIt= fetchBlockFromFile(&in,k,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+          isFetched = fetchDirectoryEntry(currentDirectory,buff,destDirectory,in,blockSize,k);
+          if(isFetched ==0){
+            if((int)currentDirectory.file_type ==2){
+              directories->push(currentDirectory);
+              ext2Path +=(destDirectory+"/");
+            }
+            else{
+              cout<<"It isn't the directory file. So you can't change the diretory"<<endl;
+            }
+          }
+          else{
+            cout<<"Unable to fetch the destined directory"<<endl;
+          }
+        }
+    }
+ }
+  free(directories);
   return 0;
 }
 
@@ -210,7 +247,7 @@ void displayUUID(struct vdifile* file,struct UUID *id){
 }
 void displayInodeMeta(unsigned char * inodeMetaData,int iNum){
     int j=0;
-    cout<<endl<<"----------------------------------"<<"Inode :"<<iNum<<"--------------------------------------------------------------------------------------"<<endl;
+    cout<<endl<<"---------------"<<"Inode :"<<iNum<<"--------"<<endl;
 
     for(int i=0;i<128;i++){
       cout<<std::hex<<(int)*(inodeMetaData+i)<<"\t";
@@ -220,6 +257,24 @@ void displayInodeMeta(unsigned char * inodeMetaData,int iNum){
         j=0;
       }
     }
-    cout<<endl<<"------------------------------------------------------------------------------------------------------------------------"<<endl;
+    cout<<endl<<"---------------------------------------------------------------"<<endl;
 
+}
+int fetchDirectoryEntry(struct Entry & directory,unsigned char buff[],string fileName,struct inode in,int blockSize,int bNum){
+  int remainingSpace= in.i_size-bNum*blockSize;
+  if(remainingSpace>=blockSize){
+    remainingSpace= blockSize;
+  }
+  int offset=0;
+  while(offset<remainingSpace){
+    memcpy(&directory,buff+offset,sizeof(struct Entry));
+    char name[directory.nameLength+1];
+    memcpy(name, directory.name,directory.nameLength);
+    name[directory.nameLength]='\0';
+    if((string)name== fileName){
+      return 0;
+    }
+    offset += directory.recordLength;
+  }
+  return 1;
 }
