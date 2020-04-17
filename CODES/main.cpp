@@ -249,6 +249,18 @@ int main(int argc, char* argv[]){
               break;
           }
       }
+      fetchInode(ext2,file,table,directory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+      totalBlocksInFile = in.i_size/blockSize;
+      if(in.i_size % blockSize != 0 ) totalBlocksInFile++;
+      for (int i = 0; i < totalBlocksInFile; i++) {
+        isIt= fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+        if(write(op, buff, sizeof(buff)) == -1) {
+          cout << "Unable to write" << "\n";
+        }
+      }
+   }
+   else if(command.length() > 5 && Contains(command, "write ")) {
+     cout << "LOL" << endl;
    }
  }
   free(directories);
