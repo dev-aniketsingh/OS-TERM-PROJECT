@@ -5,6 +5,7 @@
 #include<stdio.h>
 #include <fstream>
 #include<iostream>
+#include<bitset>
 #include<stack>
 #include"vdiheader.h"
 #include"vdifile.h"
@@ -31,6 +32,7 @@ void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
 void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
 bool Contains(string s1, string s2);
+void ClearScreen();
 struct __attribute__((packed)) UUID {
     uint32_t
         timeLow;
@@ -156,7 +158,31 @@ int main(int argc, char* argv[]){
   }
   bool run= true,isIt= false;
   string ext2Path="",command;
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+
+  cout << "Instructions to navigate through the project " << "\n";
+  cout << "All commands are case sensetive" << "\n";
+  cout << "The commands that works are: " << "\n" ;
+  cout << "List all items: ls " << "\n";
+  cout << "Long list:  ls -l" << "\n";
+  cout << "Change Directory: cd [Directory Name]" << "\n";
+  cout << "Go back to previous directory: cd " << "\n";
+  cout << "To clear screen: clear" << "\n";
+  cout << "----------------------------Read Instructions---------------------------" << "\n";
+  cout << "To read from vdi file to your host computer: " << "\n";
+  cout << " read _path__in_the_vdi_file_       _host_path_where_the_file_must_be_copied_" << "\n";
+  cout << endl;
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "=======================================================++++++++++++++================================================================" << "\n";
+
+
  while(run){
+   cout << "Type your command here: " << "\n";
     cout<<"/"<<ext2Path;
     cout << endl;
     getline(cin,command);
@@ -182,6 +208,57 @@ int main(int argc, char* argv[]){
        }
       }
       free(tempDirectory);
+    }
+    else if(command == "clear") {
+      ClearScreen();
+    }
+    else if(command == "ls -l") {
+      struct Entry entry;
+      fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+      totalBlocksInFile = in.i_size/blockSize;
+      if(in.i_size % blockSize != 0) totalBlocksInFile++;
+      for(int i =0; i < totalBlocksInFile; i++) {
+        fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+        size = 0;
+        remainingSpace = in.i_size - i * blockSize;
+        if(remainingSpace >= blockSize) remainingSpace = blockSize;
+        while(size < remainingSpace) {
+          memcpy(&entry,buff+size, sizeof(struct Entry));
+          char name[entry.nameLength+1];
+          memcpy(name, entry.name,entry.nameLength);
+          name[entry.nameLength] = '\0';
+          isFetched = fetchDirectoryEntry(entry,buff,(string)name,in,blockSize,i);
+          if(isFetched == 0) {
+            fetchInode(ext2,file,table,entry.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+          if(in.i_size%blockSize!=0) in.i_size= (in.i_size/blockSize)*blockSize+blockSize;
+          //permissions 
+            if(S_ISREG(in.i_mode))   cout << "-";
+            if(S_ISDIR(in.i_mode))   cout << "d";
+            if(S_ISCHR(in.i_mode))   cout << "c";
+            if(S_ISBLK(in.i_mode))   cout << "b";
+            if(S_ISFIFO(in.i_mode))  cout << "p";
+            if(S_ISSOCK(in.i_mode))  cout << "s";
+            if(S_ISLNK(in.i_mode))   cout << "l";
+            if (in.i_mode & S_IRUSR) cout<<"r"; else cout << "-";
+            if (in.i_mode & S_IWUSR) cout<<"w"; else cout << "-";
+            if (in.i_mode & S_IXUSR) cout<<"x"; else cout << "-";
+            if (in.i_mode & S_IRGRP) cout<<"r"; else cout << "-";
+            if (in.i_mode & S_IWGRP) cout<<"w"; else cout << "-";
+            if (in.i_mode & S_IXGRP) cout<<"x"; else cout << "-";
+            if (in.i_mode & S_IROTH) cout<<"r"; else cout << "-";
+            if (in.i_mode & S_IWOTH) cout<<"w"; else cout << "-";
+            if (in.i_mode & S_IXOTH) cout<<"x"; else cout << "-";
+            cout <<  "\t" << setw(2);
+
+          //  cout << S_ISDIR(in.i_mode) << endl;
+
+            cout << std::left << std::setw(25) << entry.name <<  "\t"  << std::dec << (in.i_size)<< " bytes " <<  "\t" << "\n";
+
+
+          }
+          size += entry.recordLength;
+        }
+      }
     }
     else if(command =="cd"){
       int length= directories->top().nameLength;
@@ -259,6 +336,7 @@ int main(int argc, char* argv[]){
         }
       }
    }
+
    else if(command.length() > 5 && Contains(command, "write ")) {
      cout << "LOL" << endl;
    }
@@ -339,4 +417,9 @@ bool Contains(string s1, string s2) {
    return false;
 
  return true;
+}
+void ClearScreen() {
+  int n;
+  for (n = 0; n < 10; n++)
+    printf( "\n\n\n\n\n\n\n\n\n\n" );
 }
