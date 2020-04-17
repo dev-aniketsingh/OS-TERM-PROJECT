@@ -21,11 +21,16 @@
 #include"inode.h"
 #include<cstring>
 #include<vector>
+#include<sstream>
+#include<algorithm>
+
+
 using namespace std;
 int fetchDirectoryEntry(struct Entry &,unsigned char[],string,struct inode,int,int);
 void displayTranslationMap(struct vdifile * file);
 void displayUUID(struct vdifile*,struct UUID*);
 void displayInodeMeta(unsigned char inodeMetaData[],int iNum);
+bool Contains(string s1, string s2);
 struct __attribute__((packed)) UUID {
     uint32_t
         timeLow;
@@ -115,6 +120,7 @@ int main(int argc, char* argv[]){
   /*
     This given code is used to read the given inode
   */
+
   struct inode  in;
   int readInodeBytes;
   unsigned char inodeMetaData[128];
@@ -130,7 +136,7 @@ int main(int argc, char* argv[]){
   unsigned char buff[blockSize];
   int isFetched,totalBlocksInFile,
       remainingSpace,size;
-  struct Entry currentDirectory;
+  struct Entry currentDirectory, directory;
   stack<struct Entry>* directories= new stack<struct Entry>();
   int rootDirectorySize= (in.i_size)/blockSize;
   if(in.i_size%blockSize !=0){
@@ -139,6 +145,7 @@ int main(int argc, char* argv[]){
   for(int i=0;i<rootDirectorySize;i++){
     fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
     isFetched= fetchDirectoryEntry(currentDirectory,buff,".",in,blockSize,i);
+    directory = currentDirectory;
     directories->push(currentDirectory);
     if(isFetched==0){
       break;
@@ -151,7 +158,9 @@ int main(int argc, char* argv[]){
   string ext2Path="",command;
  while(run){
     cout<<"/"<<ext2Path;
+    cout << endl;
     getline(cin,command);
+//  cout << " value"  <<  command.compare(0,3,"read ") << endl;
     if(command=="ls"){
       struct Entry * tempDirectory= (struct Entry * ) malloc(sizeof(struct Entry));
       if(fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
@@ -185,7 +194,7 @@ int main(int argc, char* argv[]){
         ext2Path= ext2Path.substr(0,ext2Path.length()-length-1);
       }
     }
-    else if(command.length()>3 && command.compare(0,2,"cd ")){
+    else if(command.length()>3 && Contains(command, "cd ")){
       string destDirectory= command.substr(3,command.length()-3);
       currentDirectory= directories->top();
         fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
@@ -208,6 +217,39 @@ int main(int argc, char* argv[]){
           }
         }
     }
+    else  if(command.length() > 4 && Contains(command, "read ") ) {
+      string newString = command.substr(6, command.length() - 6);
+      stringstream sStream(newString);
+      vector<string> path, diretoryName;
+      string temp;
+      while(getline(sStream, temp, ' ')) {
+        path.push_back(temp);
+      }
+
+      stringstream ss(path[0]);
+      while(getline(ss,temp, '/')){
+        diretoryName.push_back(temp);
+      }
+      path[1] += ("/" + diretoryName[diretoryName.size()-1]);
+      char * hostpath= (char * )malloc(path[1].length());
+      for(int i=0;i<path[1].length();i++){
+        *(hostpath+i)= path[1][i];
+      }
+      cout<<hostpath<<endl;
+      int op = open(hostpath, O_CREAT| O_WRONLY );
+      free(hostpath);
+      for(int j = 0; j < diretoryName.size(); j++) {
+          fetchInode(ext2,file,table,directory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+          int numBlock = in.i_size/blockSize;
+          if(in.i_size % blockSize != 0 ) numBlock++;
+          for (int i = 0; i < numBlock; i++)  {
+            isIt= fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+            isFetched = fetchDirectoryEntry(directory,buff,diretoryName[j],in,blockSize,i);
+            if(isFetched == 0)
+              break;
+          }
+      }
+   }
  }
   free(directories);
   return 0;
@@ -277,4 +319,12 @@ int fetchDirectoryEntry(struct Entry & directory,unsigned char buff[],string fil
     offset += directory.recordLength;
   }
   return 1;
+}
+
+bool Contains(string s1, string s2) {
+ int a = s1.find(s2);
+   if(a == -1)
+   return false;
+
+ return true;
 }
