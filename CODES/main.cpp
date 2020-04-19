@@ -5,6 +5,7 @@
 #include<stdio.h>
 #include <fstream>
 #include<iostream>
+#include<iomanip>
 #include<bitset>
 #include<stack>
 #include"vdiheader.h"
@@ -233,7 +234,7 @@ int main(int argc, char* argv[]){
             fetchInode(ext2,file,table,entry.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
           if(in.i_size%blockSize!=0) in.i_size= (in.i_size/blockSize)*blockSize+blockSize;
           //permissions
-            cout << std::left << setw(35) << entry.name;
+            cout << std::left <<setw(35) << entry.name;
 
             if(S_ISREG(in.i_mode))   cout << "-";
             if(S_ISDIR(in.i_mode))   cout << "d";
@@ -251,7 +252,7 @@ int main(int argc, char* argv[]){
             if (in.i_mode & S_IROTH) cout<<"r"; else cout << "-";
             if (in.i_mode & S_IWOTH) cout<<"w"; else cout << "-";
             if (in.i_mode & S_IXOTH) cout<<"x"; else cout << "-";
-            cout << right << setw(15);
+            cout << right << std::setw(15);
           //  cout << S_ISDIR(in.i_mode) << endl;
 
             time_t rawtime  = (const time_t) in.i_mtime;
@@ -260,9 +261,9 @@ int main(int argc, char* argv[]){
 
 
             cout << in.i_uid;
-            cout << right << setw(16);
+            cout << right <<setw(16);
             cout << in.i_gid;
-            cout << right << setw(16);
+            cout << right <<setw(16);
             cout << std::dec << (in.i_size)  << " bytes      ";
             cout << right << setw(16);
             cout << asctime(timeinfo);
@@ -300,6 +301,7 @@ int main(int argc, char* argv[]){
             }
             else{
               cout<<"It isn't the directory file. So you can't change the diretory"<<endl;
+              currentDirectory= directories->top();
             }
           }
           else{
