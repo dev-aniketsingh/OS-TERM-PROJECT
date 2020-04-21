@@ -8,6 +8,7 @@
 #include<string>
 #include<cstring>
 #include<cstdint>
+#include<bitset>
 #include"vdiheader.h"
 #include"vdifile.h"
 #include"vdifunctions.h"
@@ -75,14 +76,12 @@ bool inodeInUse(struct ext2File *f,unsigned char inodeBitMap[], int & indexToFre
 /*
 fetch the inode bitmap representing the particular block Group
 */
-bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[], uint32_t iNum,
+bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[],int blockGroupNumber,
                                 int offsetToSuperBlock,int translationMapData[],unsigned char inodeBitMap[]){
   int readBitBytes,
       blockSize,
-      blockGroupNumber,
       offsetInodeBitMap;
   blockSize=1024<<f->superblock.s_log_block_size;
-  blockGroupNumber= (iNum-1)/f->superblock.s_inodes_per_group;
   if(blockSize==1024){
     offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
                     (bg[blockGroupNumber].bg_inode_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
@@ -102,21 +101,23 @@ bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
 /*
 allocate the unused inode and mark the byte as used in inode bitmap
 */
-void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct ext2File * ext2){
+void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct blockGroupDescriptor bg[],struct ext2File * ext2,int blockGroup){
     int byteOffset= indexToFreeInode/8;
     int offsetIntoByte= indexToFreeInode%8;
     uint8_t byteData= inodeBitMap[byteOffset];
     inodeBitMap[byteOffset]= 0x1<<(7-offsetIntoByte) | byteData;
     ext2->superblock.s_free_inodes_count -=1;
+    bg[blockGroup].bg_free_inodes -=1;
 }
 /*
 it marks the particular inode as freeInode
 */
 void freeInode(int iNum,unsigned char inodeBitMap[]){
-    int byteOffset= (iNum-1)/8;
-    int offsetIntoByte= 7-(iNum-1)%8;
+    int byteOffset= iNum/8;
+    int offsetIntoByte= 7-(iNum%8);
     uint8_t byteData= inodeBitMap[byteOffset];
-    inodeBitMap[byteOffset]= (byteData>>offsetIntoByte ^ 0x1);
+    cout<<" "<<std::bitset<8>(byteData)<<" ";
+    inodeBitMap[byteOffset]= (0x1<<offsetIntoByte ^ byteData);
 }
 /*
 it fetches the given block number
@@ -214,32 +215,7 @@ bool fetchBlockFromFile(struct inode * i, int bNum,struct superBlock sBlock,
 /*
 This function can be used to allocate the blocks
 */
-int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescriptor bg[], uint32_t iBlockNumber,
-    int offsetToSuperBlock,int translationMapData[]){
-    int readBitBytes,
-        blockSize,
-        blockGroupNumber,
-        offsetBlockBitMap;
-    blockSize=1024<<f->superblock.s_log_block_size;
-    blockGroupNumber= iBlockNumber/f->superblock.s_blocks_per_group;
-    if(blockSize==1024){
-      offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
-                      (bg[blockGroupNumber].bg_block_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-    }
-    if(blockSize==4096){
-      offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
-                      (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-    }
-    unsigned char blockBitMap[blockSize];
-    int physicalAddress= actualPage(offsetBlockBitMap,vdi,translationMapData);
-    vdiSeek(vdi,offsetBlockBitMap,SEEK_SET);
-    int readBytes=vdiRead(vdi,blockBitMap,sizeof(blockBitMap));
-    if(readBytes==1024){
-      cout<<"able to read block bitmap"<<endl;
-    }
-    else{
-      cout<<"Unable to read the block bitmap"<<endl;
-    }
+int allocateBlock(struct ext2File *f,struct blockGroupDescriptor bg[],unsigned char blockBitMap[],int blockGroup){
     bool used= true;
     for(int i=0;i<(1024<<f->superblock.s_log_block_size);i++){
       uint8_t oneByte= blockBitMap[i];
@@ -247,8 +223,10 @@ int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescri
         used= (oneByte>>j & 0x1);
         if(!used){
           f->superblock.s_free_blocks_count -=1;
-          bg[blockGroupNumber].bg_free_blocks -=1;
-          blockBitMap[i]= (0x1 << (7-j))| blockBitMap[i];
+          bg[blockGroup].bg_free_blocks -=1;
+          //cout<<std::bitset<8>(blockBitMap[i])<<" ";
+          blockBitMap[i]= 0x1<<j | blockBitMap[i];
+          //cout<<std::bitset<8>(blockBitMap[i])<<" ";
           int blockNumber= i*8+7-j;
           return blockNumber;
         }
@@ -257,12 +235,35 @@ int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescri
     }
     return -1;
 }
+bool fetchBlockBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[],int blockGroupNumber,
+                      int offsetToSuperBlock,int translationMapData[],unsigned char blockBitMap[]){
+  int readBitBytes,
+      blockSize,
+      offsetBlockBitMap;
+  blockSize=1024<<f->superblock.s_log_block_size;
+  if(blockSize==1024){
+        offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
+                          (bg[blockGroupNumber].bg_block_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+  }
+  if(blockSize==4096){
+        offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
+                          (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
+  }
+  int physicalAddress= actualPage(offsetBlockBitMap,vdi,translationMapData);
+  vdiSeek(vdi,offsetBlockBitMap,SEEK_SET);
+  int readBytes=vdiRead(vdi,blockBitMap,blockSize);
+  if(readBytes!=blockSize){
+    cout<<"able to read block bitmap"<<endl;
+    return true;
+  }
+  return false;
+}
 /*
 it is used to write back to the given block number of the file
 */
 bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,int blockSize,struct superBlock sBlock,
                      struct ext2File * ext2,struct vdifile*file,struct mbrSector mbr,int translationMapData[],struct blockGroupDescriptor bg[],
-                     int offsetToSuperBlock,int * realBuffer){
+                     int offsetToSuperBlock,int * realBuffer,unsigned char blockBitMap[],int blockGroupNumber,int sizeRealBuffer){
   vector<int>blockList;
   int newBlockNumber;
   int k= (1024<<sBlock.s_log_block_size)/4;
@@ -271,16 +272,16 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
       offsetInto;
   if(bNum<12){
       if(i->i_block[bNum]==0){
-          i->i_block[bNum]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+          i->i_block[bNum]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
           writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
       blockList.assign(i->i_block,i->i_block+sizeof(i->i_block)/sizeof(i->i_block[0]));
-      bool isDone=writeBlock(ext2,blockList[bNum],file,mbr,translationMapData,realBuffer);
+      bool isDone=writeBlock(ext2,blockList[bNum],file,mbr,translationMapData,realBuffer,sizeRealBuffer);
       return isDone;
   }
   else if (bNum<12+k){
       if(i->i_block[12]==0){
-        i->i_block[12]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        i->i_block[12]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
       fetchBlock(ext2,i->i_block[12], file, mbr, translationMapData,k,buffer);
@@ -289,19 +290,19 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
       bNum= bNum-12;
       index= bNum%k;
       if(blockList[index] ==0){
-        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[index]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+index)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
       newBlockNumber=blockList[index];
       fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
       blockList.assign(buffer,buffer+sizeof(buffer)/sizeof(buffer[0]));
-      bool isDone=writeBlock(ext2,blockList[index],file,mbr,translationMapData,realBuffer);
+      bool isDone=writeBlock(ext2,blockList[index],file,mbr,translationMapData,realBuffer,sizeRealBuffer);
       return isDone;
   }
   else if(bNum<12+k+pow(k,2)){
       if(i->i_block[13]==0){
-        i->i_block[13]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        i->i_block[13]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
       fetchBlock(ext2,i->i_block[13],file,mbr,translationMapData,k,buffer);
@@ -311,9 +312,9 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
       index= offsetInto/k;
       offsetInto= offsetInto%k;
       if(blockList[index] ==0){
-        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[index]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+index)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
       newBlockNumber=blockList[index];
       fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
@@ -321,16 +322,16 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
 
       //Finally it can be used to locate direct block of the file
       if(blockList[offsetInto]==0){
-        blockList[offsetInto]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[offsetInto]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+offsetInto)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
-      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
+      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer,sizeRealBuffer);
       return isDone;
   }
   else{
       if(i->i_block[14]==0){
-        i->i_block[14]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        i->i_block[14]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         writeInode(ext2,file,bg,iNum,i,offsetToSuperBlock,translationMapData);
       }
 
@@ -341,9 +342,9 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
       index= bNum/pow(k,2);
       offsetInto= bNum%(k*k) ;
       if(blockList[index] ==0){
-        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[index]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+index)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
       newBlockNumber=blockList[index];
       fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
@@ -352,9 +353,9 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
       index= offsetInto/k;
       offsetInto= offsetInto%k;
       if(blockList[index] ==0){
-        blockList[index]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[index]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+index)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
       newBlockNumber=blockList[index];
       fetchBlock(ext2,blockList[index],file,mbr,translationMapData,k,buffer);
@@ -362,11 +363,11 @@ bool writeBlockToFile(struct inode *i, int bNum,int offsetToGivenInode,int iNum,
 
       //Finally it can be used to locate direct block of the file
       if(blockList[offsetInto]==0){
-        blockList[offsetInto]=allocateBlock(ext2,file,bg,bNum+i->i_block[0],offsetToSuperBlock,translationMapData);
+        blockList[offsetInto]=allocateBlock(ext2,bg,blockBitMap,blockGroupNumber);
         *(buffer+offsetInto)= blockList[index];
-        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer);
+        writeBlock(ext2,newBlockNumber,file,mbr,translationMapData,buffer,sizeof(buffer));
       }
-      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer);
+      bool isDone=writeBlock(ext2,blockList[offsetInto],file,mbr,translationMapData,realBuffer,sizeof(realBuffer));
       return isDone;
   }
 }
@@ -406,7 +407,7 @@ void displayInode(struct inode in){
   cout<<"\n"<<"Mode : "<<std::oct<<in.i_mode<<"\n";
   cout<<"Size : "<<std::dec<<in.i_size<<"\n";
   cout<<"Blocks : "<<std::dec<<in.i_blocks<<"\n";
-  cout<<"UID/GID : "<<std::dec<<in.i_uid<<"\n";
+  cout<<"UID/GID : "<<std::hex<<in.i_uid<<"\n";
   cout<<"Links : "<<std::dec<<in.i_links_count<<"\n";
   cout<<"Last created : "<<std::dec<<in.i_ctime<<" Seconds since 1970 janurary 1st"<<"\n";
   cout<<"Last access : "<<std::dec<<in.i_atime<<"  Seconds since 1970 janurary 1st"<<"\n";
@@ -435,20 +436,16 @@ void displayInode(struct inode in){
 /*
 This function can be used to write to blocks
 */
-bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int *buffer){
-  int offsetToGivenBlock= mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*blockNumber*1024;
+bool writeBlock(struct ext2File * ext2,int blockNumber,struct vdifile*file,struct mbrSector mbr,int translationMapData[],int *buffer,int size){
+  int offsetToGivenBlock= mbr.partitionEntryInfo[0].logicalBlocking*512+blockNumber*1024;
   int physicalAddress= actualPage(offsetToGivenBlock,file,translationMapData);
   vdiSeek(file,physicalAddress,SEEK_SET);
-  int writeBytes= write(file->fileDescriptor,buffer,1024);
-  if(writeBytes== 1024){
-    cout<<"Successfully written"<<endl;
-    return true;
-  }
-  else{
-    cout<<"Unable to write successfully"<<endl;
+  int writeBytes= write(file->fileDescriptor,buffer,size);
+  if(writeBytes ==-1){
+    cout<<"Unable to write "<<endl;
     return false;
   }
-
+  return true;
 }
 
 /*
