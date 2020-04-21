@@ -176,6 +176,9 @@ int main(int argc, char* argv[]){
   cout << "----------------------------Read Instructions---------------------------" << "\n";
   cout << "To read from vdi file to your host computer: " << "\n";
   cout << " read _path__in_the_vdi_file_       _host_path_where_the_file_must_be_copied_" << "\n";
+  cout << "----------------------------Write Instructions---------------------------" << "\n";
+  cout << "To read from vdi file to your host computer: " << "\n";
+  cout << " write _path__in_the_vdi_file_must_be_copied_into_       _host_path_where_the_file_must_be_copied_from" << "\n";
   cout << endl;
   cout << "=======================================================++++++++++++++================================================================" << "\n";
   cout << "=======================================================++++++++++++++================================================================" << "\n";
@@ -312,6 +315,7 @@ int main(int argc, char* argv[]){
     else  if(command.length() > 4 && Contains(command, "read ") ) {
       string newString = command.substr(6, command.length() - 6);
       stringstream sStream(newString);
+      struct Entry tempDirectory = directory;
       vector<string> path, diretoryName;
       string temp;
       while(getline(sStream, temp, ' ')) {
@@ -331,17 +335,17 @@ int main(int argc, char* argv[]){
       int op = open(hostpath, O_CREAT| O_WRONLY );
       free(hostpath);
       for(int j = 0; j < diretoryName.size(); j++) {
-          fetchInode(ext2,file,table,directory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+          fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
           int numBlock = in.i_size/blockSize;
           if(in.i_size % blockSize != 0 ) numBlock++;
           for (int i = 0; i < numBlock; i++)  {
-            isIt= fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
-            isFetched = fetchDirectoryEntry(directory,buff,diretoryName[j],in,blockSize,i);
+            isIt = fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+            isFetched = fetchDirectoryEntry(tempDirectory,buff,diretoryName[j],in,blockSize,i);
             if(isFetched == 0)
               break;
           }
       }
-      fetchInode(ext2,file,table,directory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+      fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
       totalBlocksInFile = in.i_size/blockSize;
       if(in.i_size % blockSize != 0 ) totalBlocksInFile++;
       for (int i = 0; i < totalBlocksInFile; i++) {
@@ -351,9 +355,53 @@ int main(int argc, char* argv[]){
         }
       }
    }
-
    else if(command.length() > 5 && Contains(command, "write ")) {
-     cout << "LOL" << endl;
+     string newString = command.substr(7, command.length() - 7);
+     stringstream sStream(newString);
+     vector<string> path, diretoryName;
+     struct Entry tempDirectory = directory;
+     string temp;
+     while(getline(sStream, temp, ' ')) {
+       path.push_back(temp);
+     }
+
+    stringstream ss(path[0]);
+    while(getline(ss,temp, '/')) {
+       diretoryName.push_back(temp);
+    }
+    int fd = open(path[1].c_str(), O_RDONLY);
+    if(fd == -1) {
+      cout << "file could not open, check you path again" << "\n";
+    }
+    int fileSize = lseek(fd, 0, SEEK_END);
+    char * buf= (char *) malloc(fileSize);
+    if(lseek(fd,0,SEEK_SET)==-1){
+      cout<<"Couldn't change the position of the cursor "<<endl;
+    }
+    if(read(fd, buf, fileSize) ==-1) {
+      cout << "Couldn't read the file" << endl;
+    }
+    for(int j = 0; j < diretoryName.size(); j++) {
+        fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
+        int numBlock = in.i_size/blockSize;
+        if(in.i_size % blockSize != 0 ) numBlock++;
+        for (int i = 0; i < numBlock; i++)  {
+          isIt = fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+          isFetched = fetchDirectoryEntry(tempDirectory,buff,diretoryName[j],in,blockSize,i);
+          if(isFetched == 0)
+            break;
+        }
+     }
+     if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
+       int inodeNumber = 0;
+       unsigned char inBitMap[1024<<ext2->superblock.s_log_block_size];
+       fetchInodeBitMap(ext2,file,table,tempDirectory.inodeNumber,offsetToSuperBlock,translationMapData,inBitMap);
+       if(!inodeInUse(ext2, inBitMap, inodeNumber)){
+         allocateInode(inodeNumber,inBitMap,ext2);
+       }
+     }
+
+    free(buf);
    }
  }
   free(directories);

@@ -23,10 +23,10 @@ bool fetchBlockFromFile(struct inode *, int,struct superBlock,struct ext2File *,
 void fetchBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int,int[]);
 bool writeBlockToFile(struct inode *, int,int,int,int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,
                       int[],struct blockGroupDescriptor[],int,int *);
-bool inodeInUse(struct ext2File *,unsigned char []);
-void allocateInode(int & ,unsigned char []);
+bool inodeInUse(struct ext2File *,unsigned char [], int &);
+void allocateInode(int & ,unsigned char [],struct ext2File * ext2);
 void freeInode(int,unsigned char[]);
-unsigned char * fetchInodeBitMap(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[]);
+bool fetchInodeBitMap(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[],unsigned char []);
 void displayInode(struct inode in);
 int allocateBlock(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[]);
 bool writeBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int *);

@@ -75,8 +75,8 @@ bool inodeInUse(struct ext2File *f,unsigned char inodeBitMap[], int & indexToFre
 /*
 fetch the inode bitmap representing the particular block Group
 */
-unsigned char * fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[], uint32_t iNum,
-                                int offsetToSuperBlock,int translationMapData[]){
+bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[], uint32_t iNum,
+                                int offsetToSuperBlock,int translationMapData[],unsigned char inodeBitMap[]){
   int readBitBytes,
       blockSize,
       blockGroupNumber,
@@ -91,20 +91,23 @@ unsigned char * fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct
     offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
                     (bg[blockGroupNumber].bg_inode_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
   }
-  unsigned char inodeBitMap[blockSize];
   int physicalAddress= actualPage(offsetInodeBitMap,vdi,translationMapData);
   vdiSeek(vdi,physicalAddress,SEEK_SET);
   readBitBytes= vdiRead(vdi,inodeBitMap,sizeof(inodeBitMap));
-  return inodeBitMap;
+  if(readBitBytes == blockSize){
+    return true;
+  }
+  return false;
 }
 /*
 allocate the unused inode and mark the byte as used in inode bitmap
 */
-void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[]){
+void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct ext2File * ext2){
     int byteOffset= indexToFreeInode/8;
     int offsetIntoByte= indexToFreeInode%8;
-    int byteData= inodeBitMap[byteOffset];
+    uint8_t byteData= inodeBitMap[byteOffset];
     inodeBitMap[byteOffset]= 0x1<<(7-offsetIntoByte) | byteData;
+    ext2->superblock.s_free_inodes_count -=1;
 }
 /*
 it marks the particular inode as freeInode
@@ -238,7 +241,7 @@ int allocateBlock(struct ext2File *f,struct vdifile *vdi,struct blockGroupDescri
       cout<<"Unable to read the block bitmap"<<endl;
     }
     bool used= true;
-    for(int i=0;i<1024;i++){
+    for(int i=0;i<(1024<<f->superblock.s_log_block_size);i++){
       uint8_t oneByte= blockBitMap[i];
       for(int j=0;j<8;j++){
         used= (oneByte>>j & 0x1);
