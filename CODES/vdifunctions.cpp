@@ -14,7 +14,7 @@ using namespace std;
 struct vdifile * vdiOpen(char *fn){
   int fileDescriptor;
   struct vdifile * file= (struct vdifile *) malloc(sizeof(struct vdifile));
-  fileDescriptor= open(fn,O_RDONLY);
+  fileDescriptor= open(fn,O_RDWR);
   file->fileDescriptor= fileDescriptor;
   if(fileDescriptor==-1){
     cout<<"unable to open the given file "<<"\n";
