@@ -395,9 +395,54 @@ int main(int argc, char* argv[]){
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
        int inodeNumber = 0;
        unsigned char inBitMap[1024<<ext2->superblock.s_log_block_size];
-       fetchInodeBitMap(ext2,file,table,tempDirectory.inodeNumber,offsetToSuperBlock,translationMapData,inBitMap);
+       fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap);
        if(!inodeInUse(ext2, inBitMap, inodeNumber)){
-         allocateInode(inodeNumber,inBitMap,ext2);
+         //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
+         allocateInode(inodeNumber,inBitMap,table,ext2,1);
+         //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
+         if(fetchInode(ext2,file,table,inodeNumber+1,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
+           in.i_mode= 0x8000|0x0100|0x0080|0x0040;
+           int n= blockSize/4;
+           //cout<<std::bitset<16>(in.i_mode)<<" ";
+           in.i_size= fileSize;
+           in.i_uid=0x3e8;
+           in.i_gid= 0x3e8;
+           in.i_links_count =1;
+           in.i_blocks = (fileSize)/512;
+           if(fileSize%512 !=0) in.i_blocks +=1;
+           int numBlocksNeeded= fileSize/blockSize;
+           if(fileSize%blockSize !=0) numBlocksNeeded++;
+           //cout<<numBlocksNeeded<<" total blocks "<<endl;
+           unsigned char blockBitMap[blockSize];
+           int blockGNum=0;
+           fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+           if(numBlocksNeeded<=12){
+             for(int j=0;j<numBlocksNeeded;j++){
+               in.i_block[j]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[j]==-1 &&blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+                 j--;
+               }
+             }
+           }
+           else if(numBlocksNeeded<12+n){
+             bool go= true;
+             int blocksWithin=0;
+             while(go){
+               in.i_block[12]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[12] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+               }
+               else go= false;
+             }
+             blocksWithin= numBlocksNeeded-12;
+             int allocatedBlocks[blocksWithin];
+             for(int i=0;i<blocksWithin;i++) allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+             writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
+           }
+         }
        }
      }
 
