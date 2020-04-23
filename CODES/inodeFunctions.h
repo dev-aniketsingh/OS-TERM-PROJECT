@@ -21,12 +21,14 @@ bool fetchInode(struct ext2File*,struct vdifile*,struct blockGroupDescriptor[], 
 bool writeInode(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,struct inode*,int,int[]);
 bool fetchBlockFromFile(struct inode *, int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,int[],unsigned char[]);
 void fetchBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int,int[]);
-bool writeBlockToFile(struct inode *, int,int,int,int,struct superBlock,struct ext2File *,struct vdifile*,struct mbrSector,
-                      int[],struct blockGroupDescriptor[],int,int *);
+bool writeBlockToFile(struct inode *i, int bNum,int iNum,int blockSize,struct superBlock sBlock,
+                     struct ext2File *,struct vdifile*,struct mbrSector,int[],struct blockGroupDescriptor[],int,unsigned char *,unsigned char[],int&,int);
 bool inodeInUse(struct ext2File *,unsigned char [], int &);
-void allocateInode(int & ,unsigned char [],struct ext2File * ext2);
+void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct blockGroupDescriptor bg[],struct ext2File * ext2,int blockGroup);
 void freeInode(int,unsigned char[]);
-bool fetchInodeBitMap(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[],unsigned char []);
+bool fetchInodeBitMap(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[],int,int,int[],unsigned char [],int&);
 void displayInode(struct inode in);
-int allocateBlock(struct ext2File *,struct vdifile *,struct blockGroupDescriptor[], uint32_t,int,int[]);
-bool writeBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int *);
+int allocateBlock(struct ext2File *f,struct blockGroupDescriptor bg[],unsigned char blockBitMap[],int blockGroup);
+bool writeBlock(struct ext2File *,int,struct vdifile*,struct mbrSector,int[],int *,int);
+bool fetchBlockBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroupDescriptor bg[],int blockGroupNumber,
+                      int offsetToSuperBlock,int translationMapData[],unsigned char blockBitMap[],int&);
