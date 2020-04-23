@@ -7,6 +7,7 @@
 #include<iostream>
 #include<iomanip>
 #include<bitset>
+#include<cmath>
 #include<stack>
 #include"vdiheader.h"
 #include"vdifile.h"
@@ -101,9 +102,14 @@ int main(int argc, char* argv[]){
   if(((ext2->superblock).s_blocks_count-ext2->superblock.s_first_data_block)%(ext2->superblock).s_blocks_per_group>0){
      totalBlockGroup++;
   }
+  int offsetToBlockGroup;
   struct blockGroupDescriptor table[totalBlockGroup];
   if(blockSize==4096){
-    int offsetToBlockGroup= offsetToSuperBlock-1024+blockSize;
+    offsetToBlockGroup= offsetToSuperBlock-1024+blockSize;
+    vdiSeek(file,offsetToBlockGroup,SEEK_SET);
+  }
+  else{
+    offsetToBlockGroup= offsetToSuperBlock+blockSize;
     vdiSeek(file,offsetToBlockGroup,SEEK_SET);
   }
   vdiRead(file,table,sizeof(table));
@@ -219,14 +225,18 @@ int main(int argc, char* argv[]){
     }
     else if(command == "ls -l") {
       struct Entry entry;
+      struct inode tempInode;
       fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
       totalBlocksInFile = in.i_size/blockSize;
       if(in.i_size % blockSize != 0) totalBlocksInFile++;
+      cout<<"Total : "<<totalBlocksInFile<<"\n";
       for(int i =0; i < totalBlocksInFile; i++) {
         fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
         size = 0;
+        cout<<"Inode Size: "<<in.i_size<<"\n";
         remainingSpace = in.i_size - i * blockSize;
         if(remainingSpace >= blockSize) remainingSpace = blockSize;
+        cout<<"remainingSpace: "<<remainingSpace<<"\n";
         while(size < remainingSpace) {
           memcpy(&entry,buff+size, sizeof(struct Entry));
           char name[entry.nameLength+1];
@@ -234,40 +244,41 @@ int main(int argc, char* argv[]){
           name[entry.nameLength] = '\0';
           isFetched = fetchDirectoryEntry(entry,buff,(string)name,in,blockSize,i);
           if(isFetched == 0) {
-            fetchInode(ext2,file,table,entry.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
-          if(in.i_size%blockSize!=0) in.i_size= (in.i_size/blockSize)*blockSize+blockSize;
+            int sizeOfFile=tempInode.i_size;
+            fetchInode(ext2,file,table,entry.inodeNumber,tempInode,offsetToSuperBlock,translationMapData,inodeMetaData);
+            if(tempInode.i_size%blockSize!=0) sizeOfFile= (tempInode.i_size/blockSize)*blockSize+blockSize;
           //permissions
             cout << std::left <<setw(35) << entry.name;
 
-            if(S_ISREG(in.i_mode))   cout << "-";
-            if(S_ISDIR(in.i_mode))   cout << "d";
-            if(S_ISCHR(in.i_mode))   cout << "c";
-            if(S_ISBLK(in.i_mode))   cout << "b";
-            if(S_ISFIFO(in.i_mode))  cout << "p";
-            if(S_ISSOCK(in.i_mode))  cout << "s";
-            if(S_ISLNK(in.i_mode))   cout << "l";
-            if (in.i_mode & S_IRUSR) cout<<"r"; else cout << "-";
-            if (in.i_mode & S_IWUSR) cout<<"w"; else cout << "-";
-            if (in.i_mode & S_IXUSR) cout<<"x"; else cout << "-";
-            if (in.i_mode & S_IRGRP) cout<<"r"; else cout << "-";
-            if (in.i_mode & S_IWGRP) cout<<"w"; else cout << "-";
-            if (in.i_mode & S_IXGRP) cout<<"x"; else cout << "-";
-            if (in.i_mode & S_IROTH) cout<<"r"; else cout << "-";
-            if (in.i_mode & S_IWOTH) cout<<"w"; else cout << "-";
-            if (in.i_mode & S_IXOTH) cout<<"x"; else cout << "-";
+            if(S_ISREG(tempInode.i_mode))   cout << "-";
+            if(S_ISDIR(tempInode.i_mode))   cout << "d";
+            if(S_ISCHR(tempInode.i_mode))   cout << "c";
+            if(S_ISBLK(tempInode.i_mode))   cout << "b";
+            if(S_ISFIFO(tempInode.i_mode))  cout << "p";
+            if(S_ISSOCK(tempInode.i_mode))  cout << "s";
+            if(S_ISLNK(tempInode.i_mode))   cout << "l";
+            if (tempInode.i_mode & S_IRUSR) cout<<"r"; else cout << "-";
+            if (tempInode.i_mode & S_IWUSR) cout<<"w"; else cout << "-";
+            if (tempInode.i_mode & S_IXUSR) cout<<"x"; else cout << "-";
+            if (tempInode.i_mode & S_IRGRP) cout<<"r"; else cout << "-";
+            if (tempInode.i_mode & S_IWGRP) cout<<"w"; else cout << "-";
+            if (tempInode.i_mode & S_IXGRP) cout<<"x"; else cout << "-";
+            if (tempInode.i_mode & S_IROTH) cout<<"r"; else cout << "-";
+            if (tempInode.i_mode & S_IWOTH) cout<<"w"; else cout << "-";
+            if (tempInode.i_mode & S_IXOTH) cout<<"x"; else cout << "-";
             cout << right << std::setw(15);
           //  cout << S_ISDIR(in.i_mode) << endl;
 
-            time_t rawtime  = (const time_t) in.i_mtime;
+            time_t rawtime  = (const time_t) tempInode.i_mtime;
             struct tm * timeinfo;
             timeinfo = localtime (&rawtime);
 
 
-            cout << in.i_uid;
+            cout << tempInode.i_uid;
             cout << right <<setw(16);
-            cout << in.i_gid;
+            cout << tempInode.i_gid;
             cout << right <<setw(16);
-            cout << std::dec << (in.i_size)  << " bytes      ";
+            cout << std::dec << (sizeOfFile)  << " bytes      ";
             cout << right << setw(16);
             cout << asctime(timeinfo);
             cout << right;
@@ -279,9 +290,12 @@ int main(int argc, char* argv[]){
     }
     else if(command =="cd"){
       int length= directories->top().nameLength;
+      struct Entry last= directories->top();
       directories->pop();
       if(directories->empty()){
         cout<<"You are at the root directory"<<"\n";
+        directories->push(last);
+        currentDirectory= directories->top();
       }
       else{
         currentDirectory= directories->top();
@@ -301,6 +315,8 @@ int main(int argc, char* argv[]){
             if((int)currentDirectory.file_type ==2){
               directories->push(currentDirectory);
               ext2Path +=(destDirectory+"/");
+              cout<<"Entered"<<"\n";
+              break;
             }
             else{
               cout<<"It isn't the directory file. So you can't change the diretory"<<endl;
@@ -332,7 +348,7 @@ int main(int argc, char* argv[]){
         *(hostpath+i)= path[1][i];
       }
       cout<<hostpath<<endl;
-      int op = open(hostpath, O_CREAT| O_WRONLY );
+      int op = open(hostpath, O_CREAT| O_RDWR|O_APPEND, S_IRWXU );
       free(hostpath);
       for(int j = 0; j < diretoryName.size(); j++) {
           fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
@@ -344,16 +360,26 @@ int main(int argc, char* argv[]){
             if(isFetched == 0)
               break;
           }
+
       }
       fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
       totalBlocksInFile = in.i_size/blockSize;
       if(in.i_size % blockSize != 0 ) totalBlocksInFile++;
-      for (int i = 0; i < totalBlocksInFile; i++) {
+      lseek(op,0,SEEK_SET);
+      for (int i = 0; i < totalBlocksInFile-1; i++) {
         isIt= fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
         if(write(op, buff, sizeof(buff)) == -1) {
           cout << "Unable to write" << "\n";
         }
       }
+      int left=0;
+      if(in.i_size%blockSize !=0) left= in.i_size %blockSize;
+      else left= blockSize;
+      fetchBlockFromFile(&in,totalBlocksInFile-1,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+      if(write(op, buff,left) == -1) {
+        cout << "Unable to write" << "\n";
+      }
+
    }
    else if(command.length() > 5 && Contains(command, "write ")) {
      string newString = command.substr(7, command.length() - 7);
@@ -369,18 +395,16 @@ int main(int argc, char* argv[]){
     while(getline(ss,temp, '/')) {
        diretoryName.push_back(temp);
     }
-    int fd = open(path[1].c_str(), O_RDONLY);
+    vector<string>userPath;
+    stringstream s2(path[1]);
+    while(getline(s2,temp,'/')){
+      userPath.push_back(temp);
+    }
+    int fd = open(path[1].c_str(), O_RDWR);
     if(fd == -1) {
       cout << "file could not open, check you path again" << "\n";
     }
     int fileSize = lseek(fd, 0, SEEK_END);
-    char * buf= (char *) malloc(fileSize);
-    if(lseek(fd,0,SEEK_SET)==-1){
-      cout<<"Couldn't change the position of the cursor "<<endl;
-    }
-    if(read(fd, buf, fileSize) ==-1) {
-      cout << "Couldn't read the file" << endl;
-    }
     for(int j = 0; j < diretoryName.size(); j++) {
         fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
         int numBlock = in.i_size/blockSize;
@@ -392,10 +416,12 @@ int main(int argc, char* argv[]){
             break;
         }
      }
-     if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
+     struct inode Inode;
+     if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
        int inodeNumber = 0;
+       int offsetIn,offsetBl;
        unsigned char inBitMap[1024<<ext2->superblock.s_log_block_size];
-       fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap);
+       fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap,offsetIn);
        if(!inodeInUse(ext2, inBitMap, inodeNumber)){
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
          allocateInode(inodeNumber,inBitMap,table,ext2,1);
@@ -415,25 +441,40 @@ int main(int argc, char* argv[]){
            //cout<<numBlocksNeeded<<" total blocks "<<endl;
            unsigned char blockBitMap[blockSize];
            int blockGNum=0;
-           fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+           fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
            if(numBlocksNeeded<=12){
              for(int j=0;j<numBlocksNeeded;j++){
                in.i_block[j]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(in.i_block[j]==-1 &&blockGNum<totalBlockGroup){
                  blockGNum++;
-                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
                  j--;
                }
              }
            }
-           else if(numBlocksNeeded<12+n){
+           else if(numBlocksNeeded<=12+n){
+              cout<<std::bitset<8>(blockBitMap[0])<<" ";
              bool go= true;
              int blocksWithin=0;
+             for(int d=0;d<12;d++){
+               in.i_block[d]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[d] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                 d--;
+               }
+             }
              while(go){
                in.i_block[12]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(in.i_block[12] ==-1 && blockGNum<totalBlockGroup){
                  blockGNum++;
-                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap);
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
                }
                else go= false;
              }
@@ -442,11 +483,367 @@ int main(int argc, char* argv[]){
              for(int i=0;i<blocksWithin;i++) allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
              writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
            }
+           else if(numBlocksNeeded<=12+n+pow(n,2)){
+             bool keep= true;
+             bool go = true;
+             int blocksWithin=0;
+             for(int d=0;d<12;d++){
+               in.i_block[d]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[d] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                 d--;
+               }
+             }
+             /*
+             Allocate the blocks for single indirect blocks
+             */
+             while(go){
+               in.i_block[12]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[12] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               }
+               else go= false;
+             }
+
+             blocksWithin=n;
+             int allocatedBlocks[blocksWithin];
+             for(int i=0;i<blocksWithin;i++){
+              allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(allocatedBlocks[i]==-1 && blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                i--;
+              }
+             }
+             writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
+
+             /*
+             Allocate the blocks for double indirect blocks
+             */
+              while(keep){
+                in.i_block[13]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+                if(in.i_block[13]==-1 && blockGNum<totalBlockGroup){
+                  blockGNum++;
+                  lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                  write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                  fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                }
+                else keep= false;
+             }
+             blocksWithin= numBlocksNeeded-12-n;
+             int numberOfSingleRequired= (blocksWithin-1)/n;
+             if((blocksWithin-1)%n !=0) numberOfSingleRequired++;
+             int singleIndirectBlocks[numberOfSingleRequired];
+             for(int i=0;i<numberOfSingleRequired;i++){
+               singleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(singleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                 i--;
+               }
+            }
+            writeBlock(ext2,in.i_block[13],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
+            int directBlocks[n];
+            for(int j=0;j<(numberOfSingleRequired-1);j++){
+              for(int k=0;k<n;k++){
+                directBlocks[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+                if(directBlocks[k] ==-1 && blockGNum<totalBlockGroup){
+                  blockGNum++;
+                  lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                  write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                  fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                  k--;
+                }
+              }
+              writeBlock(ext2,singleIndirectBlocks[j],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
+            }
+            int remDirect[blocksWithin%n];
+            for(int q=0;q<=(blocksWithin-1)%n;q++){
+              remDirect[q]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(remDirect[q] ==-1 && blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                q--;
+              }
+            }
+            writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+            //for(int i=0;i<15;i++) cout<<in.i_block[i]<<" \t";
+            /*int test[blockSize/4];
+            fetchBlock(ext2,1323,file,mbrData,translationMapData,blockSize/4,test);
+            cout<<endl<<endl;
+            int count =0;
+            for(int x: test){
+              count++;
+              cout<<x<<"\t";
+              if(count==16){
+                count=0;
+                cout<<endl;
+              }
+            }
+            cout<<endl<<numBlocksNeeded;*/
+          }
+          /*
+          Allocate the blocks for double indirect blocks
+          */
+          else if(numBlocksNeeded<=12+n+pow(n,2)+pow(n,3)){
+            bool go= true;
+            bool keep= true;
+            bool cont= true;
+            int blocksWithin=0;
+            for(int d=0;d<12;d++){
+              in.i_block[d]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(in.i_block[d] ==-1 && blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                d--;
+              }
+            }
+            /*
+            Allocate the blocks for single  indirect blocks
+            */
+            while(go){
+              in.i_block[12]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(in.i_block[12] ==-1 && blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+              }
+              else go= false;
+            }
+            blocksWithin= n;
+            int allocatedBlocks[blocksWithin];
+            for(int i=0;i<blocksWithin;i++) allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+            writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
+
+            /*
+            Allocate the blocks for double indirect blocks
+            */
+            while(cont){
+               in.i_block[13]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[13]==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               }
+               else cont= false;
+            }
+            blocksWithin= pow(n,2);
+            int numberOfSingleRequired= (blocksWithin-1)/n;
+            int singleBlocks[numberOfSingleRequired];
+            for(int i=0;i<numberOfSingleRequired;i++){
+              singleBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(singleBlocks[i]==-1 &&blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                i--;
+              }
+           }
+           writeBlock(ext2,in.i_block[13],file,mbrData,translationMapData,singleBlocks,sizeof(singleBlocks));
+           int direct[n];
+           for(int j=0;j<numberOfSingleRequired;j++){
+             for(int k=0;k<n;k++){
+               direct[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(direct[k] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                 k--;
+               }
+             }
+             writeBlock(ext2,singleBlocks[j],file,mbrData,translationMapData,direct,sizeof(direct));
+           }
+            /*
+            Allocate the blocks for double indirect blocks
+            */
+            while(keep){
+               in.i_block[14]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(in.i_block[14]==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               }
+               else keep= false;
+            }
+            blocksWithin= numBlocksNeeded-12-n-pow(n,2);
+            int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
+            if((blocksWithin-1)%(n*n) !=0) numDoubleIndirect++;
+            int doubleIndirectBlocks[numDoubleIndirect];
+            for(int i=0;i<numDoubleIndirect;i++){
+              doubleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+              if(doubleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
+                blockGNum++;
+                lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                i--;
+              }
+           }
+           writeBlock(ext2,in.i_block[14],file,mbrData,translationMapData,doubleIndirectBlocks,sizeof(doubleIndirectBlocks));
+           int numberOfSingle= (blocksWithin-1)/n;
+           if((blocksWithin-1)%n !=0) numberOfSingle++;
+           int singleIndirectBlocks[numberOfSingle];
+           for(int j=0;j<(numDoubleIndirect-1);j++){
+             for(int k=0;k<n;k++){
+                singleIndirectBlocks[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+                if(singleIndirectBlocks[k] ==-1 && blockGNum<totalBlockGroup){
+                  blockGNum++;
+                  lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                  write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                  fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                  k--;
+                }
+             }
+             writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
+           }
+           int index=((blocksWithin-1)%(n*n))/n;
+           if(((blocksWithin-1)%(n*n))%n !=0) index++;
+           int remSingle[index];
+           for(int e=0;e<index;e++){
+             remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+             if(remSingle[e] ==-1 && blockGNum<totalBlockGroup){
+               blockGNum++;
+               lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+               write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+               fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               e--;
+             }
+           }
+           writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
+           int directBlocks[n];
+           for(int l=0;l<(numberOfSingle-1);l++){
+             for(int m=0;m<n;m++){
+               directBlocks[m]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(directBlocks[m] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                 m--;
+               }
+             }
+             writeBlock(ext2,singleIndirectBlocks[l],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
+           }
+           int remDirect[(blocksWithin%(n*n))%n];
+           for(int r=0;r<=(((blocksWithin-1)%(n*n))%n);r++){
+             remDirect[r]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+             if(remDirect[r] ==-1 && blockGNum<totalBlockGroup){
+               blockGNum++;
+               lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+               write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+               fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               r--;
+             }
+           }
+           writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+          }
+          struct Entry newDirectory;
+          newDirectory.inodeNumber= inodeNumber+1;
+          newDirectory.nameLength=userPath[userPath.size()-1].length();
+          memcpy(newDirectory.name,userPath[userPath.size()-1].c_str(),newDirectory.nameLength);
+          newDirectory.file_type= 1;
+          int sizeofNewDir= 8+newDirectory.nameLength;
+          if(sizeofNewDir%4 !=0) sizeofNewDir += (4-sizeofNewDir%4);
+          newDirectory.recordLength= sizeofNewDir;
+          struct inode destinedInode;
+          fetchInode(ext2,file,table,tempDirectory.inodeNumber,destinedInode,offsetToSuperBlock,translationMapData,inodeMetaData);
+          int requiredBlocks= (destinedInode.i_size)/blockSize;
+          if(destinedInode.i_size%blockSize !=0) requiredBlocks++;
+          /*This is done if there is any left over for placing any new directory entry*/
+          int leftOver;
+          for(int q=0;q<requiredBlocks;q++){
+            fetchBlockFromFile(&destinedInode,q,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
+            remainingSpace= destinedInode.i_size-q*blockSize;
+            if(remainingSpace>=blockSize)remainingSpace= blockSize;
+            leftOver= blockSize-remainingSpace;
+            if(leftOver>=sizeofNewDir){
+              memcpy(buff+remainingSpace,&newDirectory,newDirectory.recordLength);
+              bool isWritten=writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                               offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
+              destinedInode.i_size += sizeofNewDir;
+              break;
+            }
+          }
+          if(leftOver<sizeofNewDir){
+            if(requiredBlocks<=12){
+              bool move=true;
+              while(move){
+                destinedInode.i_block[requiredBlocks]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+                if(destinedInode.i_block[requiredBlocks]==-1 && blockGNum<totalBlockGroup){
+                  lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                  write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                  blockGNum++;
+                  fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                }
+                else move= false;
+              }
+            }
+            /*
+            I don't think that a directory file requires more than 12 blocks to keep directories entries
+            Each directories entry occupy at max 263 bytes. So, (12*1024)/263 close to 436 directories entries.
+            */
+            unsigned char * writeBlock= (unsigned char *)malloc(sizeofNewDir);
+            memcpy(writeBlock,&newDirectory,sizeofNewDir);
+            if(!writeBlockToFile(&destinedInode,requiredBlocks,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                             offsetToSuperBlock,writeBlock,blockBitMap,blockGNum,sizeofNewDir)) cout<<"Unable to write "<<endl;
+            destinedInode.i_size += sizeofNewDir;
+            free(writeBlock);
+          }
+          /*
+            This is used to write the file data to vdifile
+          */
+          unsigned char tempBuffer[blockSize];
+          int blocksToWritten= (fileSize/blockSize);
+          if(fileSize%blockSize) blocksToWritten++;
+          for(int i=0;i<(blocksToWritten-1);i++){
+            lseek(fd,i*blockSize,SEEK_SET);
+            read(fd,tempBuffer,sizeof(tempBuffer));
+            if(!writeBlockToFile(&in,i,inodeNumber+1,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                             offsetToSuperBlock,tempBuffer,blockBitMap,blockGNum,sizeof(tempBuffer))) cout<<"Unable to write data to file"<<"\n";
+          }
+          int leftPartInFile;
+          if(fileSize %blockSize ==0 ) leftPartInFile= blockSize;
+          else leftPartInFile= fileSize%blockSize;
+          unsigned char remPart[leftPartInFile];
+          read(fd,remPart,leftPartInFile);
+          if(!writeBlockToFile(&in,blocksToWritten-1,inodeNumber+1,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                           offsetToSuperBlock,remPart,blockBitMap,blockGNum,leftPartInFile)) cout<<"Unable to write data to file"<<"\n";
+          /*
+            This is used to write the file data to vdifile
+          */
+          if(!writeInode(ext2,file,table,newDirectory.inodeNumber,&in,offsetToSuperBlock,translationMapData)) cout<<"unable to write"<<"\n";
+          if(!writeInode(ext2,file,table,tempDirectory.inodeNumber,&destinedInode,offsetToSuperBlock,translationMapData)){
+            cout<<"Unable to write inode to Vdi file "<<"\n";
+          }
+          lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+          if(write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap))==-1) cout<<"Unable to write block Bit map"<<"\n";
+          lseek(file->fileDescriptor,offsetIn,SEEK_SET);
+          if(write(file->fileDescriptor,inBitMap,sizeof(inBitMap))==-1)cout<<"Unable to write inode Bit map "<<"\n";
+          lseek(file->fileDescriptor,offsetToBlockGroup,SEEK_SET);
+          if(write(file->fileDescriptor,table,sizeof(table))==-1)cout<<"Unable to write block group descriptor"<<"\n";
+          writeSuperBlock(ext2,file,mbrData,ext2->superblock,translationMapData);
          }
        }
      }
-
-    free(buf);
    }
  }
   free(directories);
