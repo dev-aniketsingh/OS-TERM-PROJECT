@@ -253,7 +253,7 @@ bool fetchBlockBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
     }
   }
   else{
-    offsetBlockBitMap= blockGroupNumber* blockSize*f->superblock.s_blocks_per_group)+offsetToSuperBlock-vdi->header.frameOffset-1024+
+    offsetBlockBitMap= blockGroupNumber* blockSize*f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
                          (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
 
   }
