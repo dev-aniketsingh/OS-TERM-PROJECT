@@ -191,7 +191,18 @@ int main(int argc, char* argv[]){
   cout << "=======================================================++++++++++++++================================================================" << "\n";
   cout << "=======================================================++++++++++++++================================================================" << "\n";
 
-
+/*  int test[blockSize/4];
+  fetchBlock(ext2,1434,file,mbrData,translationMapData,blockSize/4,test);
+  cout<<endl<<endl;
+  int count1 =0;
+  for(int x: test){
+    count1++;
+    cout<<x<<"\t";
+    if(count==16){
+      count1=0;
+      cout<<endl;
+    }
+  }*/
  while(run){
    cout << "Type your command here: " << "\n";
     cout<<"/"<<ext2Path;
@@ -400,7 +411,7 @@ int main(int argc, char* argv[]){
     while(getline(s2,temp,'/')){
       userPath.push_back(temp);
     }
-    int fd = open(path[1].c_str(), O_RDWR);
+    int fd = open(path[1].c_str(), O_RDWR|O_APPEND, S_IRWXU);
     if(fd == -1) {
       cout << "file could not open, check you path again" << "\n";
     }
@@ -453,9 +464,11 @@ int main(int argc, char* argv[]){
                  j--;
                }
              }
+             in.i_block[12]=0;
+             in.i_block[13]=0;
+             in.i_block[14]=0;
            }
            else if(numBlocksNeeded<=12+n){
-              cout<<std::bitset<8>(blockBitMap[0])<<" ";
              bool go= true;
              int blocksWithin=0;
              for(int d=0;d<12;d++){
@@ -482,6 +495,10 @@ int main(int argc, char* argv[]){
              int allocatedBlocks[blocksWithin];
              for(int i=0;i<blocksWithin;i++) allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
              writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
+             in.i_block[13]=0;
+             in.i_block[14]=0;
+             for(int x: in.i_block) cout<<"inode blocks : "<<x<<"\n";
+
            }
            else if(numBlocksNeeded<=12+n+pow(n,2)){
              bool keep= true;
@@ -580,19 +597,7 @@ int main(int argc, char* argv[]){
             }
             writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
             //for(int i=0;i<15;i++) cout<<in.i_block[i]<<" \t";
-            /*int test[blockSize/4];
-            fetchBlock(ext2,1323,file,mbrData,translationMapData,blockSize/4,test);
-            cout<<endl<<endl;
-            int count =0;
-            for(int x: test){
-              count++;
-              cout<<x<<"\t";
-              if(count==16){
-                count=0;
-                cout<<endl;
-              }
-            }
-            cout<<endl<<numBlocksNeeded;*/
+            in.i_block[14]=0;
           }
           /*
           Allocate the blocks for double indirect blocks
@@ -755,7 +760,7 @@ int main(int argc, char* argv[]){
              }
            }
            writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
-          }
+         }
           struct Entry newDirectory;
           newDirectory.inodeNumber= inodeNumber+1;
           newDirectory.nameLength=userPath[userPath.size()-1].length();
