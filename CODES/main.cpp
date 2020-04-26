@@ -130,7 +130,6 @@ int main(int argc, char* argv[]){
   /*
     This given code is used to read the given inode
   */
-
   struct inode  in;
   int readInodeBytes;
   unsigned char inodeMetaData[128];
@@ -493,11 +492,19 @@ int main(int argc, char* argv[]){
              }
              blocksWithin= numBlocksNeeded-12;
              int allocatedBlocks[blocksWithin];
-             for(int i=0;i<blocksWithin;i++) allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+             for(int i=0;i<blocksWithin;i++){
+               allocatedBlocks[i]=allocateBlock(ext2,table,blockBitMap,blockGNum);
+               if(allocatedBlocks[i] ==-1 && blockGNum<totalBlockGroup){
+                 blockGNum++;
+                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+               }
+             }
              writeBlock(ext2,in.i_block[12],file,mbrData,translationMapData,allocatedBlocks,sizeof(allocatedBlocks));
              in.i_block[13]=0;
              in.i_block[14]=0;
-             for(int x: in.i_block) cout<<"inode blocks : "<<x<<"\n";
+             //for(int x: in.i_block) cout<<"inode blocks : "<<x<<"\n";
 
            }
            else if(numBlocksNeeded<=12+n+pow(n,2)){
