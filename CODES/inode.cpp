@@ -229,7 +229,8 @@ int allocateBlock(struct ext2File *f,struct blockGroupDescriptor bg[],unsigned c
           blockBitMap[i]= 0x1<<j | blockBitMap[i];
           //cout<<std::bitset<8>(blockBitMap[i])<<" ";
           int blockNumber= i*8+7-j;
-          return blockNumber;
+          if(1024<<f->superblock.s_log_block_size==1024)return f->superblock.s_blocks_per_group*blockGroup+blockNumber+1;
+          if(1024<<f->superblock.s_log_block_size==4096)return f->superblock.s_blocks_per_group*blockGroup+blockNumber;
         }
       }
 
@@ -242,21 +243,7 @@ bool fetchBlockBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
       blockSize,
       offsetBlockBitMap;
   blockSize=1024<<f->superblock.s_log_block_size;
-  if(blockGroupNumber ==0 ||blockGroupNumber==1|| blockGroupNumber==3||blockGroupNumber==5||blockGroupNumber==7){
-    if(blockSize==1024){
-        offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
-                          (bg[blockGroupNumber].bg_block_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-    }
-    if(blockSize==4096){
-        offsetBlockBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
-                          (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-    }
-  }
-  else{
-    offsetBlockBitMap= blockGroupNumber* blockSize*f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
-                         (bg[blockGroupNumber].bg_block_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-
-  }
+  offsetBlockBitMap= bg[blockGroupNumber].bg_block_bitmap*blockSize+offsetToSuperBlock-vdi->header.frameOffset-1024;
   int physicalAddress= actualPage(offsetBlockBitMap,vdi,translationMapData);
   offset= physicalAddress;
   vdiSeek(vdi,physicalAddress,SEEK_SET);
