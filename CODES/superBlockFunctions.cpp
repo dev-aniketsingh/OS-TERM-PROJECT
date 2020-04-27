@@ -102,7 +102,7 @@ int displaySuperBlock(struct ext2File* ext2){
 void writeSuperBlock(struct ext2File* ext2,struct vdifile * file,struct mbrSector mbr,struct superBlock& buffer,int translationMapData[]){
   int offset= mbr.partitionEntryInfo[0].logicalBlocking*512+1024;
   int physicalAddress= actualPage(offset,file, translationMapData);
-  vdiSeek(file,physicalAddress,offset);
+  vdiSeek(file,physicalAddress,SEEK_SET);
   int writeBytes=write(file->fileDescriptor,&buffer,sizeof(buffer));
   if(writeBytes!=sizeof(buffer)){
     cout<<"unable to write superBlock successfully "<<endl;
