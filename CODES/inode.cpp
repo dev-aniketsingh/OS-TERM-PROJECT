@@ -82,14 +82,7 @@ bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
       blockSize,
       offsetInodeBitMap;
   blockSize=1024<<f->superblock.s_log_block_size;
-  if(blockSize==1024){
-    offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset+
-                    (bg[blockGroupNumber].bg_inode_bitmap-1-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-  }
-  if(blockSize==4096){
-    offsetInodeBitMap=blockGroupNumber*(blockSize)* f->superblock.s_blocks_per_group+offsetToSuperBlock-vdi->header.frameOffset-1024+
-                    (bg[blockGroupNumber].bg_inode_bitmap-blockGroupNumber*f->superblock.s_blocks_per_group)*(blockSize);
-  }
+  offsetInodeBitMap= bg[blockGroupNumber].bg_inode_bitmap*blockSize+offsetToSuperBlock-vdi->header.frameOffset-1024;
   int physicalAddress= actualPage(offsetInodeBitMap,vdi,translationMapData);
   offset= physicalAddress;
   vdiSeek(vdi,physicalAddress,SEEK_SET);
@@ -109,6 +102,7 @@ void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct blo
     inodeBitMap[byteOffset]= 0x1<<(7-offsetIntoByte) | byteData;
     ext2->superblock.s_free_inodes_count -=1;
     bg[blockGroup].bg_free_inodes -=1;
+    indexToFreeInode = (ext2->superblock.s_inodes_per_group *blockGroup)+indexToFreeInode;
 }
 /*
 it marks the particular inode as freeInode
