@@ -430,13 +430,14 @@ int main(int argc, char* argv[]){
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
        int inodeNumber = 0;
        int offsetIn,offsetBl;
-       unsigned char inBitMap[1024<<ext2->superblock.s_log_block_size];
+       unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
        fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap,offsetIn);
        if(!inodeInUse(ext2, inBitMap, inodeNumber)){
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
          allocateInode(inodeNumber,inBitMap,table,ext2,1);
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
          if(fetchInode(ext2,file,table,inodeNumber+1,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
+           //cout<<"inode Number : "<<in.i_size<<"\n";
            in.i_mode= 0x8000|0x0100|0x0080|0x0040;
            int n= blockSize/4;
            //cout<<std::bitset<16>(in.i_mode)<<" ";
@@ -449,7 +450,7 @@ int main(int argc, char* argv[]){
            int numBlocksNeeded= fileSize/blockSize;
            if(fileSize%blockSize !=0) numBlocksNeeded++;
            //cout<<numBlocksNeeded<<" total blocks "<<endl;
-           unsigned char blockBitMap[blockSize];
+           unsigned char blockBitMap[ext2->superblock.s_blocks_per_group/8];
            int blockGNum=0;
            fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
            if(numBlocksNeeded<=12){
