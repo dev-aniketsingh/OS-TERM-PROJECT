@@ -856,7 +856,10 @@ int main(int argc, char* argv[]){
           if(write(file->fileDescriptor,inBitMap,sizeof(inBitMap))==-1)cout<<"Unable to write inode Bit map "<<"\n";
           lseek(file->fileDescriptor,offsetToBlockGroup,SEEK_SET);
           if(write(file->fileDescriptor,table,sizeof(table))==-1)cout<<"Unable to write block group descriptor"<<"\n";
+          cout<<ext2->superblock.s_free_inodes_count<<"\n";
           writeSuperBlock(ext2,file,mbrData,ext2->superblock,translationMapData);
+          readSuperBlock(ext2,0,file,mbrData,translationMapData);
+          cout<<ext2->superblock.s_free_inodes_count<<"\n";
          }
        }
      }
