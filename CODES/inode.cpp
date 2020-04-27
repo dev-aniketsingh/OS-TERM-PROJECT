@@ -93,7 +93,7 @@ bool fetchInodeBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
   int physicalAddress= actualPage(offsetInodeBitMap,vdi,translationMapData);
   offset= physicalAddress;
   vdiSeek(vdi,physicalAddress,SEEK_SET);
-  readBitBytes= vdiRead(vdi,inodeBitMap,sizeof(inodeBitMap));
+  readBitBytes= vdiRead(vdi,inodeBitMap,(f->superblock.s_inodes_per_group/8));
   if(readBitBytes == blockSize){
     return true;
   }
@@ -247,7 +247,7 @@ bool fetchBlockBitMap(struct ext2File *f,struct vdifile * vdi, struct blockGroup
   int physicalAddress= actualPage(offsetBlockBitMap,vdi,translationMapData);
   offset= physicalAddress;
   vdiSeek(vdi,physicalAddress,SEEK_SET);
-  int readBytes=vdiRead(vdi,blockBitMap,blockSize);
+  int readBytes=vdiRead(vdi,blockBitMap,(f->superblock.s_blocks_per_group/8));
   if(readBytes!=blockSize){
     cout<<"unable to read block bitmap"<<endl;
     return false;
