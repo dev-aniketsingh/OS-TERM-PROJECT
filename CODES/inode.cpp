@@ -100,6 +100,7 @@ void allocateInode(int & indexToFreeInode,unsigned char inodeBitMap[],struct blo
     int offsetIntoByte= indexToFreeInode%8;
     uint8_t byteData= inodeBitMap[byteOffset];
     inodeBitMap[byteOffset]= 0x1<<(7-offsetIntoByte) | byteData;
+    indexToFreeInode= byteOffset*8+(7-offsetIntoByte);
     ext2->superblock.s_free_inodes_count -=1;
     bg[blockGroup].bg_free_inodes -=1;
     indexToFreeInode = (ext2->superblock.s_inodes_per_group *blockGroup)+indexToFreeInode;
@@ -222,7 +223,7 @@ int allocateBlock(struct ext2File *f,struct blockGroupDescriptor bg[],unsigned c
           //cout<<std::bitset<8>(blockBitMap[i])<<" ";
           blockBitMap[i]= 0x1<<j | blockBitMap[i];
           //cout<<std::bitset<8>(blockBitMap[i])<<" ";
-          int blockNumber= i*8+7-j;
+          int blockNumber= i*8+j;
           if(1024<<f->superblock.s_log_block_size==1024)return f->superblock.s_blocks_per_group*blockGroup+blockNumber+1;
           if(1024<<f->superblock.s_log_block_size==4096)return f->superblock.s_blocks_per_group*blockGroup+blockNumber;
         }
