@@ -414,7 +414,7 @@ int main(int argc, char* argv[]){
     if(fd == -1) {
       cout << "file could not open, check you path again" << "\n";
     }
-    int fileSize = lseek(fd, 0, SEEK_END);
+    int fileSize = lseek(fd, 0, SEEK_END)+1;
     for(int j = 0; j < diretoryName.size(); j++) {
         fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
         int numBlock = in.i_size/blockSize;
@@ -427,17 +427,21 @@ int main(int argc, char* argv[]){
         }
      }
      struct inode Inode;
+     cout<<"TEm: "<<tempDirectory.inodeNumber<<"\n";
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
+       cout<<"Temp size : "<<Inode.i_size<<"\n"<<Inode.i_blocks<<"\n";
        int inodeNumber = 0;
        int offsetIn,offsetBl;
        unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
        fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap,offsetIn);
        if(!inodeInUse(ext2, inBitMap, inodeNumber)){
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
-         allocateInode(inodeNumber,inBitMap,table,ext2,1);
+         allocateInode(inodeNumber,inBitMap,table,ext2,0);
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
+         cout<<"Inode Number : "<<inodeNumber+1<<endl;
          if(fetchInode(ext2,file,table,inodeNumber+1,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
-           //cout<<"inode Number : "<<in.i_size<<"\n";
+
+          cout<<"inode Number : "<<in.i_size<<"\n";
            in.i_mode= 0x8000|0x0100|0x0080|0x0040;
            int n= blockSize/4;
            //cout<<std::bitset<16>(in.i_mode)<<" ";
@@ -445,10 +449,9 @@ int main(int argc, char* argv[]){
            in.i_uid=0x3e8;
            in.i_gid= 0x3e8;
            in.i_links_count =1;
-           in.i_blocks = (fileSize)/512;
-           if(fileSize%512 !=0) in.i_blocks +=1;
            int numBlocksNeeded= fileSize/blockSize;
            if(fileSize%blockSize !=0) numBlocksNeeded++;
+           in.i_blocks= (numBlocksNeeded*blockSize)/512;
            //cout<<numBlocksNeeded<<" total blocks "<<endl;
            unsigned char blockBitMap[ext2->superblock.s_blocks_per_group/8];
            int blockGNum=0;
@@ -819,6 +822,7 @@ int main(int argc, char* argv[]){
             if(!writeBlockToFile(&destinedInode,requiredBlocks,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
                              offsetToSuperBlock,writeBlock,blockBitMap,blockGNum,sizeofNewDir)) cout<<"Unable to write "<<endl;
             destinedInode.i_size += sizeofNewDir;
+            destinedInode.i_blocks += (blockSize/512);
             free(writeBlock);
           }
           /*
