@@ -795,7 +795,6 @@ int main(int argc, char* argv[]){
               memcpy(buff+remainingSpace,&newDirectory,newDirectory.recordLength);
               bool isWritten=writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
                                offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
-              destinedInode.i_size += sizeofNewDir;
               break;
             }
           }
@@ -821,7 +820,7 @@ int main(int argc, char* argv[]){
             memcpy(writeBlock,&newDirectory,sizeofNewDir);
             if(!writeBlockToFile(&destinedInode,requiredBlocks,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
                              offsetToSuperBlock,writeBlock,blockBitMap,blockGNum,sizeofNewDir)) cout<<"Unable to write "<<endl;
-            destinedInode.i_size += sizeofNewDir;
+            destinedInode.i_size += blockSize;
             destinedInode.i_blocks += (blockSize/512);
             free(writeBlock);
           }
