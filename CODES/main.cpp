@@ -239,14 +239,14 @@ int main(int argc, char* argv[]){
       fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
       totalBlocksInFile = in.i_size/blockSize;
       if(in.i_size % blockSize != 0) totalBlocksInFile++;
-      cout<<"Total : "<<totalBlocksInFile<<"\n";
+      //cout<<"Total : "<<totalBlocksInFile<<"\n";
       for(int i =0; i < totalBlocksInFile; i++) {
         fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
         size = 0;
-        cout<<"Inode Size: "<<in.i_size<<"\n";
+      //  cout<<"Inode Size: "<<in.i_size<<"\n";
         remainingSpace = in.i_size - i * blockSize;
         if(remainingSpace >= blockSize) remainingSpace = blockSize;
-        cout<<"remainingSpace: "<<remainingSpace<<"\n";
+      //  cout<<"remainingSpace: "<<remainingSpace<<"\n";
         while(size < remainingSpace) {
           memcpy(&entry,buff+size, sizeof(struct Entry));
           char name[entry.nameLength+1];
@@ -254,8 +254,8 @@ int main(int argc, char* argv[]){
           name[entry.nameLength] = '\0';
           isFetched = fetchDirectoryEntry(entry,buff,(string)name,in,blockSize,i);
           if(isFetched == 0) {
-            int sizeOfFile=tempInode.i_size;
             fetchInode(ext2,file,table,entry.inodeNumber,tempInode,offsetToSuperBlock,translationMapData,inodeMetaData);
+            int sizeOfFile=tempInode.i_size;
             if(tempInode.i_size%blockSize!=0) sizeOfFile= (tempInode.i_size/blockSize)*blockSize+blockSize;
           //permissions
             cout << std::left <<setw(35) << entry.name;
@@ -427,9 +427,9 @@ int main(int argc, char* argv[]){
         }
      }
      struct inode Inode;
-     cout<<"TEm: "<<tempDirectory.inodeNumber<<"\n";
+    // cout<<"TEm: "<<tempDirectory.inodeNumber<<"\n";
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
-       cout<<"Temp size : "<<Inode.i_size<<"\n"<<Inode.i_blocks<<"\n";
+       //cout<<"Temp size : "<<Inode.i_size<<"\n"<<Inode.i_blocks<<"\n";
        int inodeNumber = 0;
        int offsetIn,offsetBl;
        unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
@@ -438,10 +438,10 @@ int main(int argc, char* argv[]){
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
          allocateInode(inodeNumber,inBitMap,table,ext2,0);
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
-         cout<<"Inode Number : "<<inodeNumber+1<<endl;
+         //cout<<"Inode Number : "<<inodeNumber+1<<endl;
          if(fetchInode(ext2,file,table,inodeNumber+1,in,offsetToSuperBlock,translationMapData,inodeMetaData)){
 
-          cout<<"inode Number : "<<in.i_size<<"\n";
+          //cout<<"inode Number : "<<in.i_size<<"\n";
            in.i_mode= 0x8000|0x0100|0x0080|0x0040;
            int n= blockSize/4;
            //cout<<std::bitset<16>(in.i_mode)<<" ";
@@ -782,7 +782,7 @@ int main(int argc, char* argv[]){
           if(sizeofNewDir%4 !=0) sizeofNewDir += (4-sizeofNewDir%4);
           newDirectory.recordLength= sizeofNewDir;
           struct inode destinedInode;
-          cout<<"Size : "<<sizeofNewDir<<"\n";
+          //cout<<"Size : "<<sizeofNewDir<<"\n";
           fetchInode(ext2,file,table,tempDirectory.inodeNumber,destinedInode,offsetToSuperBlock,translationMapData,inodeMetaData);
           int requiredBlocks= (destinedInode.i_size)/blockSize;
           if(destinedInode.i_size%blockSize !=0) requiredBlocks++;
@@ -797,13 +797,13 @@ int main(int argc, char* argv[]){
             size=0;
             while(size<remainingSpace){
               memcpy(&lastDirectory,buff+size,sizeof(struct Entry));
-              cout<<"inode : "<<lastDirectory.inodeNumber<<"\n"<<"record : "<<lastDirectory.recordLength<<"\n";
+              //cout<<"inode : "<<lastDirectory.inodeNumber<<"\n"<<"record : "<<lastDirectory.recordLength<<"\n";
               recordLengthFreeDirectory+=lastDirectory.recordLength;
               int newRecordLength= 8+lastDirectory.nameLength;
               if(lastDirectory.recordLength%4 !=0) newRecordLength += (4- (lastDirectory.recordLength%4));
               if(recordLengthFreeDirectory==blockSize && (lastDirectory.recordLength-newRecordLength)>=sizeofNewDir){
-                cout<<"Entered"<<"\n";
-                cout<<"inode Number : "<<lastDirectory.inodeNumber;
+              //  cout<<"Entered"<<"\n";
+                //cout<<"inode Number : "<<lastDirectory.inodeNumber;
                 recordLengthFreeDirectory = recordLengthFreeDirectory-lastDirectory.recordLength;
                 int temp= lastDirectory.recordLength;
                 lastDirectory.recordLength =newRecordLength;
@@ -879,10 +879,10 @@ int main(int argc, char* argv[]){
           if(write(file->fileDescriptor,inBitMap,sizeof(inBitMap))==-1)cout<<"Unable to write inode Bit map "<<"\n";
           lseek(file->fileDescriptor,offsetToBlockGroup,SEEK_SET);
           if(write(file->fileDescriptor,table,sizeof(table))==-1)cout<<"Unable to write block group descriptor"<<"\n";
-          cout<<ext2->superblock.s_free_inodes_count<<"\n";
+          //cout<<ext2->superblock.s_free_inodes_count<<"\n";
           writeSuperBlock(ext2,file,mbrData,ext2->superblock,translationMapData);
           readSuperBlock(ext2,0,file,mbrData,translationMapData);
-          cout<<ext2->superblock.s_free_inodes_count<<"\n";
+          //cout<<ext2->superblock.s_free_inodes_count<<"\n";
          }
        }
      }
