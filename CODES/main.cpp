@@ -451,7 +451,6 @@ int main(int argc, char* argv[]){
            in.i_links_count =1;
            int numBlocksNeeded= fileSize/blockSize;
            if(fileSize%blockSize !=0) numBlocksNeeded++;
-           in.i_blocks= (numBlocksNeeded*blockSize)/512;
            //cout<<numBlocksNeeded<<" total blocks "<<endl;
            unsigned char blockBitMap[ext2->superblock.s_blocks_per_group/8];
            int blockGNum=0;
@@ -509,7 +508,7 @@ int main(int argc, char* argv[]){
              in.i_block[13]=0;
              in.i_block[14]=0;
              //for(int x: in.i_block) cout<<"inode blocks : "<<x<<"\n";
-
+             in.i_blocks = ((numBlocksNeeded*blockSize)/512)+blockSize/512;
            }
            else if(numBlocksNeeded<=12+n+pow(n,2)){
              bool keep= true;
@@ -607,8 +606,8 @@ int main(int argc, char* argv[]){
               }
             }
             writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
-            //for(int i=0;i<15;i++) cout<<in.i_block[i]<<" \t";
             in.i_block[14]=0;
+            in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512;
           }
           /*
           Allocate the blocks for double indirect blocks
@@ -771,8 +770,10 @@ int main(int argc, char* argv[]){
              }
            }
            writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+           in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512+(blockSize/512)+((numDoubleIndirect*blockSize)/512)+(numberOfSingle*blockSize)/512;
          }
           struct Entry newDirectory;
+          struct Entry lastDirectory;
           newDirectory.inodeNumber= inodeNumber+1;
           newDirectory.nameLength=userPath[userPath.size()-1].length();
           memcpy(newDirectory.name,userPath[userPath.size()-1].c_str(),newDirectory.nameLength);
@@ -781,24 +782,45 @@ int main(int argc, char* argv[]){
           if(sizeofNewDir%4 !=0) sizeofNewDir += (4-sizeofNewDir%4);
           newDirectory.recordLength= sizeofNewDir;
           struct inode destinedInode;
+          cout<<"Size : "<<sizeofNewDir<<"\n";
           fetchInode(ext2,file,table,tempDirectory.inodeNumber,destinedInode,offsetToSuperBlock,translationMapData,inodeMetaData);
           int requiredBlocks= (destinedInode.i_size)/blockSize;
           if(destinedInode.i_size%blockSize !=0) requiredBlocks++;
           /*This is done if there is any left over for placing any new directory entry*/
-          int leftOver;
+          bool isTrue= true;
+          int recordLengthFreeDirectory=0;
           for(int q=0;q<requiredBlocks;q++){
+            recordLengthFreeDirectory=0;
             fetchBlockFromFile(&destinedInode,q,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
             remainingSpace= destinedInode.i_size-q*blockSize;
             if(remainingSpace>=blockSize)remainingSpace= blockSize;
-            leftOver= blockSize-remainingSpace;
-            if(leftOver>=sizeofNewDir){
-              memcpy(buff+remainingSpace,&newDirectory,newDirectory.recordLength);
-              bool isWritten=writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
-                               offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
-              break;
+            size=0;
+            while(size<remainingSpace){
+              memcpy(&lastDirectory,buff+size,sizeof(struct Entry));
+              cout<<"inode : "<<lastDirectory.inodeNumber<<"\n"<<"record : "<<lastDirectory.recordLength<<"\n";
+              recordLengthFreeDirectory+=lastDirectory.recordLength;
+              int newRecordLength= 8+lastDirectory.nameLength;
+              if(lastDirectory.recordLength%4 !=0) newRecordLength += (4- (lastDirectory.recordLength%4));
+              if(recordLengthFreeDirectory==blockSize && (lastDirectory.recordLength-newRecordLength)>=sizeofNewDir){
+                cout<<"Entered"<<"\n";
+                cout<<"inode Number : "<<lastDirectory.inodeNumber;
+                recordLengthFreeDirectory = recordLengthFreeDirectory-lastDirectory.recordLength;
+                int temp= lastDirectory.recordLength;
+                lastDirectory.recordLength =newRecordLength;
+                temp = temp-lastDirectory.recordLength;
+                recordLengthFreeDirectory += lastDirectory.recordLength;
+                newDirectory.recordLength += temp;
+                memcpy(buff+recordLengthFreeDirectory,&newDirectory,sizeofNewDir);
+                bool isWritten=writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                                   offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
+                break;
+                isTrue= false;
+              }
+                size += lastDirectory.recordLength;
             }
+            if(!isTrue) break;
           }
-          if(leftOver<sizeofNewDir){
+          if(isTrue){
             if(requiredBlocks<=12){
               bool move=true;
               while(move){
@@ -817,6 +839,7 @@ int main(int argc, char* argv[]){
             Each directories entry occupy at max 263 bytes. So, (12*1024)/263 close to 436 directories entries.
             */
             unsigned char * writeBlock= (unsigned char *)malloc(sizeofNewDir);
+            newDirectory.recordLength = blockSize;
             memcpy(writeBlock,&newDirectory,sizeofNewDir);
             if(!writeBlockToFile(&destinedInode,requiredBlocks,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
                              offsetToSuperBlock,writeBlock,blockBitMap,blockGNum,sizeofNewDir)) cout<<"Unable to write "<<endl;
