@@ -228,6 +228,7 @@ int main(int argc, char* argv[]){
           remainingSpace= in.i_size -j*blockSize;
           if(remainingSpace>=blockSize) remainingSpace= blockSize;
           while(size<remainingSpace){
+              fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
               memcpy(tempDirectory,buff+size,sizeof(struct Entry));
               char fileName[tempDirectory->nameLength+1];
               memcpy(fileName,tempDirectory->name,tempDirectory->nameLength);
@@ -361,6 +362,7 @@ int main(int argc, char* argv[]){
       while(getline(ss,temp, '/')){
         diretoryName.push_back(temp);
       }
+      if(diretoryName.size()==0)diretoryName.push_back("..");
       path[1] += ("/" + diretoryName[diretoryName.size()-1]);
       char * hostpath= (char * )malloc(path[1].length());
       for(int i=0;i<path[1].length();i++){
@@ -410,11 +412,11 @@ int main(int argc, char* argv[]){
      while(getline(sStream, temp, ' ')) {
        path.push_back(temp);
      }
-
     stringstream ss(path[0]);
     while(getline(ss,temp, '/')) {
        diretoryName.push_back(temp);
     }
+    if(diretoryName.size()==0)diretoryName.push_back("..");
     vector<string>userPath;
     stringstream s2(path[1]);
     while(getline(s2,temp,'/')){
@@ -436,10 +438,12 @@ int main(int argc, char* argv[]){
             break;
         }
      }
+     cout<<"inode Number : "<<tempDirectory.inodeNumber<<"\n";
      struct inode Inode;
     // cout<<"TEm: "<<tempDirectory.inodeNumber<<"\n";
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
        //cout<<"Temp size : "<<Inode.i_size<<"\n"<<Inode.i_blocks<<"\n";
+       cout<<"Name: "<<tempDirectory.name<<"\n";
        int inodeNumber = 0;
        int offsetIn,offsetBl;
        unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
