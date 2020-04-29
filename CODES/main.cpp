@@ -387,7 +387,7 @@ int main(int argc, char* argv[]){
       lseek(op,0,SEEK_SET);
       for (int i = 0; i < totalBlocksInFile-1; i++) {
         isIt= fetchBlockFromFile(&in,i,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
-        cout<<"is it "<<isIt<<"\n";
+        //cout<<"is it "<<isIt<<"\n";
         if(write(op, buff, sizeof(buff)) == -1) {
           cout << "Unable to write" << "\n";
         }
@@ -893,10 +893,6 @@ int main(int argc, char* argv[]){
           writeSuperBlock(ext2,file,mbrData,ext2->superblock,translationMapData);
           readSuperBlock(ext2,0,file,mbrData,translationMapData);
           //cout<<ext2->superblock.s_free_inodes_count<<"\n";
-          lseek(file->fileDescriptor,file->header.frameOffset,SEEK_SET);
-          if(write(file->fileDescriptor,translationMapData,4*file->header.totalFrame)==-1)cout<<"unable to write translation map"<<endl;
-          lseek(file->fileDescriptor,0,SEEK_SET);
-          if(write(file->fileDescriptor,&file->header,sizeof(file->header))==-1)cout<<"unable to write vdi header "<<endl;
          }
        }
      }
