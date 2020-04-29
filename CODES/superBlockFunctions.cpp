@@ -35,8 +35,10 @@ int actualPage(int virtualAddress, struct vdifile *file, int translationMapData[
       offsetToPhysicalPage,
       physicalAddress;
   physicalPageNumber= translationMapData[virtualAddress/file->header.frameSize];
-  if(physicalPageNumber==-1 || physicalPageNumber==-2){
-    
+  if(physicalPageNumber<0){
+    physicalPageNumber=virtualAddress/file->header.frameSize;
+    translationMapData[virtualAddress/file->header.frameSize]= physicalPageNumber;
+    file->header.frameAllocated++;
   }
   offsetToPhysicalPage= (virtualAddress)%file->header.frameSize;
   physicalAddress= file->header.frameOffset+physicalPageNumber*file->header.frameSize+offsetToPhysicalPage;
