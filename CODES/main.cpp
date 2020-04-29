@@ -228,7 +228,6 @@ int main(int argc, char* argv[]){
           remainingSpace= in.i_size -j*blockSize;
           if(remainingSpace>=blockSize) remainingSpace= blockSize;
           while(size<remainingSpace){
-              fetchBlockFromFile(&in,j,ext2->superblock,ext2,file,mbrData,translationMapData,buff);
               memcpy(tempDirectory,buff+size,sizeof(struct Entry));
               char fileName[tempDirectory->nameLength+1];
               memcpy(fileName,tempDirectory->name,tempDirectory->nameLength);
@@ -438,12 +437,8 @@ int main(int argc, char* argv[]){
             break;
         }
      }
-     cout<<"inode Number : "<<tempDirectory.inodeNumber<<"\n";
      struct inode Inode;
-    // cout<<"TEm: "<<tempDirectory.inodeNumber<<"\n";
      if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
-       //cout<<"Temp size : "<<Inode.i_size<<"\n"<<Inode.i_blocks<<"\n";
-       cout<<"Name: "<<tempDirectory.name<<"\n";
        int inodeNumber = 0;
        int offsetIn,offsetBl;
        unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
@@ -814,21 +809,21 @@ int main(int argc, char* argv[]){
               //cout<<"inode : "<<lastDirectory.inodeNumber<<"\n"<<"record : "<<lastDirectory.recordLength<<"\n";
               recordLengthFreeDirectory+=lastDirectory.recordLength;
               int newRecordLength= 8+lastDirectory.nameLength;
-              if(lastDirectory.recordLength%4 !=0) newRecordLength += (4- (lastDirectory.recordLength%4));
+              if(newRecordLength%4 !=0) newRecordLength += (4- newRecordLength%4);
               if(recordLengthFreeDirectory==blockSize && (lastDirectory.recordLength-newRecordLength)>=sizeofNewDir){
-              //  cout<<"Entered"<<"\n";
-                //cout<<"inode Number : "<<lastDirectory.inodeNumber;
                 recordLengthFreeDirectory = recordLengthFreeDirectory-lastDirectory.recordLength;
                 int temp= lastDirectory.recordLength;
                 lastDirectory.recordLength =newRecordLength;
                 temp = temp-lastDirectory.recordLength;
-                recordLengthFreeDirectory += lastDirectory.recordLength;
-                newDirectory.recordLength += temp;
-                memcpy(buff+recordLengthFreeDirectory,&newDirectory,sizeofNewDir);
+                newDirectory.recordLength = temp;
+                memcpy(buff+recordLengthFreeDirectory,&lastDirectory,lastDirectory.recordLength);
+                writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
+                                   offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
+                memcpy(buff+(blockSize-temp),&newDirectory,sizeofNewDir);
                 bool isWritten=writeBlockToFile(&destinedInode,q,tempDirectory.inodeNumber,blockSize,ext2->superblock,ext2,file,mbrData,translationMapData,table,
                                    offsetToSuperBlock,buff,blockBitMap,blockGNum,sizeof(buff));
-                break;
                 isTrue= false;
+                break;
               }
                 size += lastDirectory.recordLength;
             }
