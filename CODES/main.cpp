@@ -86,16 +86,6 @@ int main(int argc, char* argv[]){
    int translationMapData[4*file->header.totalFrame];
    offsetToTranslationMap=vdiSeek(file,file->header.mapOffset,SEEK_SET);
    readBytesOfTranslationMap= vdiRead(file,translationMapData,sizeof(translationMapData));
-   cout<<endl;
-   for(int x: translationMapData){
-     cout<<x<<"\t";
-     count++;
-     if(count==16){
-       cout<<endl;
-       count=0;
-     }
-   }
-   count=0;
    /*
     This reads the super block in located in the partittion
    */
