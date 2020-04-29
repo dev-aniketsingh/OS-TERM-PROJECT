@@ -893,6 +893,10 @@ int main(int argc, char* argv[]){
           writeSuperBlock(ext2,file,mbrData,ext2->superblock,translationMapData);
           readSuperBlock(ext2,0,file,mbrData,translationMapData);
           //cout<<ext2->superblock.s_free_inodes_count<<"\n";
+          lseek(file->fileDescriptor,file->header.frameSize,SEEK_SET);
+          if(write(file->fileDescriptor,translationMapData,4*file->header.totalFrame)==-1)cout<<"Unable to write translation map "<<endl;
+          lseek(file->fileDescriptor,0,SEEK_SET);
+          if(write(file->fileDescriptor,&file->header,sizeof(file->header))==-1)cout<<"Unable to write translation map "<<endl;
          }
        }
      }
