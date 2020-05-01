@@ -10,7 +10,7 @@ SPRING 2020 - COURSE OPERATING SYSTEMS BY DR. KRAMER
 
 PROJECT: A programs that copy files into and out of a VirtualBox VDI file containing a Linux ext2 filesystem.
 
-Status of Project: Not Complete 
+Status of Project: Complete 
 
 HOW TO RUN THE PROJECT
  
