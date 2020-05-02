@@ -29,6 +29,11 @@
 #include<algorithm>
 
 
+/*
+This website has been useds quite often to understand the ext2 structure
+https://www.nongnu.org/ext2-doc/ext2.html
+*/
+
 using namespace std;
 int fetchDirectoryEntry(struct Entry &,unsigned char[],string,struct inode,int,int);
 void displayTranslationMap(struct vdifile * file);
@@ -233,6 +238,11 @@ int main(int argc, char* argv[]){
       ClearScreen();
     }
     else if(command == "ls -l") {
+        /*
+        Some of the websites used to understand long list structure:
+        https://linuxconfig.org/understanding-of-ls-command-with-a-long-listing-format-output-with-permission-bits
+        https://www.techrepublic.com/blog/linux-and-open-source/get-more-out-of-the-ls-command/
+        */
       struct Entry entry;
       struct inode tempInode;
       fetchInode(ext2,file,table,currentDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
@@ -258,7 +268,10 @@ int main(int argc, char* argv[]){
             if(tempInode.i_size%blockSize!=0) sizeOfFile= (tempInode.i_size/blockSize)*blockSize+blockSize;
           //permissions
             cout << std::left <<setw(35) << entry.name;
-
+            /*
+             This website helped for the part below
+             http://cs.smith.edu/~nhowe/262/oldlabs/ext2.html
+            */
             if(S_ISREG(tempInode.i_mode))   cout << "-";
             if(S_ISDIR(tempInode.i_mode))   cout << "d";
             if(S_ISCHR(tempInode.i_mode))   cout << "c";
@@ -277,6 +290,9 @@ int main(int argc, char* argv[]){
             if (tempInode.i_mode & S_IXOTH) cout<<"x"; else cout << "-";
             cout << right << std::setw(15);
           //  cout << S_ISDIR(in.i_mode) << endl;
+          /*
+           http://www.cplusplus.com/reference/ctime/localtime/
+          */
 
             time_t rawtime  = (const time_t) tempInode.i_mtime;
             struct tm * timeinfo;
