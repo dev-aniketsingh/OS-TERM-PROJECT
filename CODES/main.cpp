@@ -675,7 +675,7 @@ int main(int argc, char* argv[]){
                else cont= false;
             }
             blocksWithin= pow(n,2);
-            int numberOfSingleRequired= (blocksWithin-1)/n;
+            int numberOfSingleRequired= blocksWithin/n;
             int singleBlocks[numberOfSingleRequired];
             for(int i=0;i<numberOfSingleRequired;i++){
               singleBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
