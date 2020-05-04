@@ -747,7 +747,7 @@ int main(int argc, char* argv[]){
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
            }
            int index=((blocksWithin-1)%(n*n))/n;
-           if(((blocksWithin-1)%(n*n))%n !=0) index++;
+           if(((blocksWithin)%(n*n))%n !=0) index++;
            int remSingle[index];
            for(int e=0;e<index;e++){
              remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
