@@ -585,7 +585,7 @@ int main(int argc, char* argv[]){
              int numberOfSingleRequired= (blocksWithin-1)/n;
              if(blocksWithin%n !=0) numberOfSingleRequired++;
              int singleIndirectBlocks[numberOfSingleRequired];
-             for(int i=0;i<numberOfSingleRequired;i++){
+             for(int i=0;i<=numberOfSingleRequired;i++){
                singleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(singleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
                  blockGNum++;
@@ -719,7 +719,7 @@ int main(int argc, char* argv[]){
             int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
             if(blocksWithin%(n*n) !=0) numDoubleIndirect++;
             int doubleIndirectBlocks[numDoubleIndirect];
-            for(int i=0;i<numDoubleIndirect;i++){
+            for(int i=0;i<=numDoubleIndirect;i++){
               doubleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
               if(doubleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
                 blockGNum++;
