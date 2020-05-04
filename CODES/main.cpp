@@ -583,7 +583,7 @@ int main(int argc, char* argv[]){
              }
              blocksWithin= numBlocksNeeded-12-n;
              int numberOfSingleRequired= (blocksWithin-1)/n;
-             if((blocksWithin-1)%n !=0) numberOfSingleRequired++;
+             if(blocksWithin%n !=0) numberOfSingleRequired++;
              int singleIndirectBlocks[numberOfSingleRequired];
              for(int i=0;i<numberOfSingleRequired;i++){
                singleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -717,7 +717,7 @@ int main(int argc, char* argv[]){
             }
             blocksWithin= numBlocksNeeded-12-n-pow(n,2);
             int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
-            if((blocksWithin-1)%(n*n) !=0) numDoubleIndirect++;
+            if(blocksWithin%(n*n) !=0) numDoubleIndirect++;
             int doubleIndirectBlocks[numDoubleIndirect];
             for(int i=0;i<numDoubleIndirect;i++){
               doubleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -731,7 +731,7 @@ int main(int argc, char* argv[]){
            }
            writeBlock(ext2,in.i_block[14],file,mbrData,translationMapData,doubleIndirectBlocks,sizeof(doubleIndirectBlocks));
            int numberOfSingle= (blocksWithin-1)/n;
-           if((blocksWithin-1)%n !=0) numberOfSingle++;
+           if(blocksWithin%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
            for(int j=0;j<(numDoubleIndirect-1);j++){
              for(int k=0;k<n;k++){
@@ -747,7 +747,7 @@ int main(int argc, char* argv[]){
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
            }
            int index=((blocksWithin-1)%(n*n))/n;
-           if(((blocksWithin-1)%(n*n))%n !=0) index++;
+           if(((blocksWithin)%(n*n))%n !=0) index++;
            int remSingle[index];
            for(int e=0;e<index;e++){
              remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
