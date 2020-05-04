@@ -759,7 +759,7 @@ int main(int argc, char* argv[]){
                e--;
              }
            }
-           writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
+           writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
            int directBlocks[n];
            for(int l=0;l<=(numberOfSingle-1);l++){
              for(int m=0;m<n;m++){
@@ -785,7 +785,7 @@ int main(int argc, char* argv[]){
                r--;
              }
            }
-           writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+           writeBlock(ext2,singleIndirectBlocks[numberOfSingle],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
            in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512+(blockSize/512)+((numDoubleIndirect*blockSize)/512)+(numberOfSingle*blockSize)/512;
          }
           struct Entry newDirectory;
