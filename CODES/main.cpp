@@ -265,8 +265,7 @@ int main(int argc, char* argv[]){
           if(isFetched == 0) {
             fetchInode(ext2,file,table,entry.inodeNumber,tempInode,offsetToSuperBlock,translationMapData,inodeMetaData);
             int sizeOfFile=tempInode.i_size;
-            if(tempInode.i_size%blockSize!=0) sizeOfFile= (tempInode.i_size/blockSize)*blockSize+blockSize;
-          //permissions
+            //permissions
             cout << std::left <<setw(35) << entry.name;
             /*
              This website helped for the part below
@@ -431,7 +430,7 @@ int main(int argc, char* argv[]){
     if(fd == -1) {
       cout << "file could not open, check you path again" << "\n";
     }
-    int fileSize = lseek(fd, 0, SEEK_END)+1;
+    int fileSize = lseek(fd, 0, SEEK_END);
     for(int j = 0; j < diretoryName.size(); j++) {
         fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
         int numBlock = in.i_size/blockSize;
