@@ -583,9 +583,9 @@ int main(int argc, char* argv[]){
              }
              blocksWithin= numBlocksNeeded-12-n;
              int numberOfSingleRequired= (blocksWithin-1)/n;
-             if(blocksWithin%n !=0) numberOfSingleRequired++;
+             if((blocksWithin-1)%n !=0) numberOfSingleRequired++;
              int singleIndirectBlocks[numberOfSingleRequired];
-             for(int i=0;i<=numberOfSingleRequired;i++){
+             for(int i=0;i<numberOfSingleRequired;i++){
                singleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(singleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
                  blockGNum++;
@@ -621,7 +621,7 @@ int main(int argc, char* argv[]){
                 q--;
               }
             }
-            writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+            writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
             in.i_block[14]=0;
             in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512;
           }
@@ -675,7 +675,7 @@ int main(int argc, char* argv[]){
                else cont= false;
             }
             blocksWithin= pow(n,2);
-            int numberOfSingleRequired= blocksWithin/n;
+            int numberOfSingleRequired= (blocksWithin-1)/n;
             int singleBlocks[numberOfSingleRequired];
             for(int i=0;i<numberOfSingleRequired;i++){
               singleBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -717,9 +717,9 @@ int main(int argc, char* argv[]){
             }
             blocksWithin= numBlocksNeeded-12-n-pow(n,2);
             int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
-            if(blocksWithin%(n*n) !=0) numDoubleIndirect++;
+            if((blocksWithin-1)%(n*n) !=0) numDoubleIndirect++;
             int doubleIndirectBlocks[numDoubleIndirect];
-            for(int i=0;i<=numDoubleIndirect;i++){
+            for(int i=0;i<numDoubleIndirect;i++){
               doubleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
               if(doubleIndirectBlocks[i]==-1 &&blockGNum<totalBlockGroup){
                 blockGNum++;
@@ -731,9 +731,9 @@ int main(int argc, char* argv[]){
            }
            writeBlock(ext2,in.i_block[14],file,mbrData,translationMapData,doubleIndirectBlocks,sizeof(doubleIndirectBlocks));
            int numberOfSingle= (blocksWithin-1)/n;
-           if(blocksWithin%n !=0) numberOfSingle++;
+           if((blocksWithin-1)%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
-           for(int j=0;j<=(numDoubleIndirect-1);j++){
+           for(int j=0;j<(numDoubleIndirect-1);j++){
              for(int k=0;k<n;k++){
                 singleIndirectBlocks[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                 if(singleIndirectBlocks[k] ==-1 && blockGNum<totalBlockGroup){
@@ -747,9 +747,9 @@ int main(int argc, char* argv[]){
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
            }
            int index=((blocksWithin-1)%(n*n))/n;
-           if(((blocksWithin)%(n*n))%n !=0) index++;
+           if(((blocksWithin-1)%(n*n))%n !=0) index++;
            int remSingle[index];
-           for(int e=0;e<=index;e++){
+           for(int e=0;e<index;e++){
              remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
              if(remSingle[e] ==-1 && blockGNum<totalBlockGroup){
                blockGNum++;
@@ -759,9 +759,9 @@ int main(int argc, char* argv[]){
                e--;
              }
            }
-           writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
+           writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
            int directBlocks[n];
-           for(int l=0;l<=(numberOfSingle-1);l++){
+           for(int l=0;l<(numberOfSingle-1);l++){
              for(int m=0;m<n;m++){
                directBlocks[m]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(directBlocks[m] ==-1 && blockGNum<totalBlockGroup){
@@ -785,7 +785,7 @@ int main(int argc, char* argv[]){
                r--;
              }
            }
-           writeBlock(ext2,singleIndirectBlocks[numberOfSingle],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+           writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
            in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512+(blockSize/512)+((numDoubleIndirect*blockSize)/512)+(numberOfSingle*blockSize)/512;
          }
           struct Entry newDirectory;
