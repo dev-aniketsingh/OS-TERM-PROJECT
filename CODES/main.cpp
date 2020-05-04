@@ -749,7 +749,7 @@ int main(int argc, char* argv[]){
            int index=((blocksWithin-1)%(n*n))/n;
            if(((blocksWithin)%(n*n))%n !=0) index++;
            int remSingle[index];
-           for(int e=0;e<index;e++){
+           for(int e=0;e<=index;e++){
              remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
              if(remSingle[e] ==-1 && blockGNum<totalBlockGroup){
                blockGNum++;
