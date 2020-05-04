@@ -621,7 +621,7 @@ int main(int argc, char* argv[]){
                 q--;
               }
             }
-            writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+            writeBlock(ext2,singleIndirectBlocks[numberOfSingleRequired],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
             in.i_block[14]=0;
             in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512;
           }
