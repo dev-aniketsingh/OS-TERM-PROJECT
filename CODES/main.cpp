@@ -761,7 +761,7 @@ int main(int argc, char* argv[]){
            }
            writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
            int directBlocks[n];
-           for(int l=0;l<(numberOfSingle-1);l++){
+           for(int l=0;l<=(numberOfSingle-1);l++){
              for(int m=0;m<n;m++){
                directBlocks[m]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                if(directBlocks[m] ==-1 && blockGNum<totalBlockGroup){
