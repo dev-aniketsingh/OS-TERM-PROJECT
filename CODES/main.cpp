@@ -731,7 +731,7 @@ int main(int argc, char* argv[]){
            }
            writeBlock(ext2,in.i_block[14],file,mbrData,translationMapData,doubleIndirectBlocks,sizeof(doubleIndirectBlocks));
            int numberOfSingle= (blocksWithin-1)/n;
-           if((blocksWithin-1)%n !=0) numberOfSingle++;
+           if(blocksWithin%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
            for(int j=0;j<(numDoubleIndirect-1);j++){
              for(int k=0;k<n;k++){
