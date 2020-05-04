@@ -169,23 +169,22 @@ int main(int argc, char* argv[]){
   }
   bool run= true,isIt= false;
   string ext2Path="",command;
-  cout << "=======================================================++++++++++++++================================================================" << "\n";
-  cout << "=======================================================++++++++++++++================================================================" << "\n";
-  cout << "=======================================================++++++++++++++================================================================" << "\n";
-  cout << "=======================================================++++++++++++++================================================================" << "\n";
+  cout << "*************************************************************************************************************************************" << "\n";
+  cout << "*************************************************************************************************************************************" << "\n";
+  cout << "*************************************************************************************************************************************" << "\n";
+  cout << "*************************************************************************************************************************************" << "\n";
 
-  cout << "Instructions to navigate through the project " << "\n";
-  cout << "All commands are case sensetive" << "\n";
-  cout << "The commands that works are: " << "\n" ;
+  cout << "Below commands are provided to navigate through different directories in ext2 file system " << "\n";
+  cout << "The commands are : " << "\n" ;
   cout << "List all items: ls " << "\n";
   cout << "Long list:  ls -l" << "\n";
   cout << "Change Directory: cd [Directory Name]" << "\n";
-  cout << "Go back to previous directory: cd " << "\n";
+  cout << "Go back to previous directory: cd" << "\n";
   cout << "To clear screen: clear" << "\n";
-  cout << "----------------------------Read Instructions---------------------------" << "\n";
+  cout << "*******************Read Instructions*********************" << "\n";
   cout << "To read from vdi file to your host computer: " << "\n";
-  cout << " read _path__in_the_vdi_file_       _host_path_where_the_file_must_be_copied_" << "\n";
-  cout << "----------------------------Write Instructions---------------------------" << "\n";
+  cout << " read path_in_the_vdi_file (eg: /examples/08.Strings) _host_path_where_the_file_must_be_copied_ (eg: /home/nirajan/Documents/test.cpp)" << "\n";
+  cout << "*******************Write Instructions*********************" << "\n";
   cout << "To read from vdi file to your host computer: " << "\n";
   cout << " write _path__in_the_vdi_file_must_be_copied_into_       _host_path_where_the_file_must_be_copied_from" << "\n";
   cout << endl;
@@ -430,8 +429,11 @@ int main(int argc, char* argv[]){
     if(fd == -1) {
       cout << "file could not open, check you path again" << "\n";
     }
-    int fileSize = lseek(fd, 0, SEEK_END);
-    for(int j = 0; j < diretoryName.size(); j++) {
+    else{
+      int fileSize = lseek(fd, 0, SEEK_END);
+      if(fileSize > (ext2->superblock.s_free_blocks_count*blockSize)) cout<<"Sorry!! Vdi file doesn't have enough free blocks to hold the size of the given file"<<"\n";
+      else{
+       for(int j = 0; j < diretoryName.size(); j++) {
         fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
         int numBlock = in.i_size/blockSize;
         if(in.i_size % blockSize != 0 ) numBlock++;
@@ -441,14 +443,14 @@ int main(int argc, char* argv[]){
           if(isFetched == 0)
             break;
         }
-     }
-     struct inode Inode;
-     if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
-       int inodeNumber = 0;
-       int offsetIn,offsetBl;
-       unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
-       fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap,offsetIn);
-       if(!inodeInUse(ext2, inBitMap, inodeNumber)){
+       }
+       struct inode Inode;
+       if(fetchInode(ext2,file,table,tempDirectory.inodeNumber,Inode,offsetToSuperBlock,translationMapData,inodeMetaData)){
+        int inodeNumber = 0;
+        int offsetIn,offsetBl;
+        unsigned char inBitMap[ext2->superblock.s_inodes_per_group/8];
+        fetchInodeBitMap(ext2,file,table,0,offsetToSuperBlock,translationMapData,inBitMap,offsetIn);
+        if(!inodeInUse(ext2, inBitMap, inodeNumber)){
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
          allocateInode(inodeNumber,inBitMap,table,ext2,0);
          //cout<<std::bitset<8>(inBitMap[inodeNumber/8])<<" ";
@@ -903,7 +905,9 @@ int main(int argc, char* argv[]){
           if(write(file->fileDescriptor,&file->header,sizeof(file->header))==-1)cout<<"Unable to write translation map "<<endl;
          }
        }
+      }
      }
+    }
    }
  }
   free(directories);
