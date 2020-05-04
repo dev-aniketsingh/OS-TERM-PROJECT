@@ -583,7 +583,7 @@ int main(int argc, char* argv[]){
              }
              blocksWithin= numBlocksNeeded-12-n;
              int numberOfSingleRequired= (blocksWithin-1)/n;
-             if((blocksWithin-1)%n !=0) numberOfSingleRequired++;
+             if(blocksWithin%n !=0) numberOfSingleRequired++;
              int singleIndirectBlocks[numberOfSingleRequired];
              for(int i=0;i<numberOfSingleRequired;i++){
                singleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
