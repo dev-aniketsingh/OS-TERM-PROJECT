@@ -733,7 +733,7 @@ int main(int argc, char* argv[]){
            int numberOfSingle= (blocksWithin-1)/n;
            if(blocksWithin%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
-           for(int j=0;j<(numDoubleIndirect-1);j++){
+           for(int j=0;j<=(numDoubleIndirect-1);j++){
              for(int k=0;k<n;k++){
                 singleIndirectBlocks[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
                 if(singleIndirectBlocks[k] ==-1 && blockGNum<totalBlockGroup){
