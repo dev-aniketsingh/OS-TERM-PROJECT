@@ -717,7 +717,7 @@ int main(int argc, char* argv[]){
             }
             blocksWithin= numBlocksNeeded-12-n-pow(n,2);
             int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
-            if((blocksWithin-1)%(n*n) !=0) numDoubleIndirect++;
+            if(blocksWithin%(n*n) !=0) numDoubleIndirect++;
             int doubleIndirectBlocks[numDoubleIndirect];
             for(int i=0;i<numDoubleIndirect;i++){
               doubleIndirectBlocks[i]= allocateBlock(ext2,table,blockBitMap,blockGNum);
