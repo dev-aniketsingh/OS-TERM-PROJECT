@@ -733,6 +733,7 @@ int main(int argc, char* argv[]){
            int numberOfSingle= (blocksWithin-1)/n;
            if(blocksWithin%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
+           int directBlocks[n];
            for(int j=0;j<(numDoubleIndirect-1);j++){
              for(int k=0;k<n;k++){
                 singleIndirectBlocks[k]= allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -743,6 +744,17 @@ int main(int argc, char* argv[]){
                   fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
                   k--;
                 }
+                for(int f=0;f<n;f++){
+                  directBlocks[f]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+                  if(directBlocks[f] ==-1 && blockGNum<totalBlockGroup){
+                    blockGNum++;
+                    lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                    write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                    fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                    f--;
+                  }
+                }
+                writeBlock(ext2,singleIndirectBlocks[k],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
              }
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
            }
@@ -758,22 +770,21 @@ int main(int argc, char* argv[]){
                fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
                e--;
              }
+             if(e<=(index-2)){
+              for(int f=0;f<n;f++){
+                directBlocks[f]= allocateBlock(ext2,table,blockBitMap,blockGNum);
+                if(directBlocks[f] ==-1 && blockGNum<totalBlockGroup){
+                  blockGNum++;
+                  lseek(file->fileDescriptor,offsetBl,SEEK_SET);
+                  write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
+                  fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
+                  f--;
+                }
+              }
+             writeBlock(ext2,remSingle[e],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
+            }
            }
            writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
-           int directBlocks[n];
-           for(int l=0;l<(numberOfSingle-1);l++){
-             for(int m=0;m<n;m++){
-               directBlocks[m]= allocateBlock(ext2,table,blockBitMap,blockGNum);
-               if(directBlocks[m] ==-1 && blockGNum<totalBlockGroup){
-                 blockGNum++;
-                 lseek(file->fileDescriptor,offsetBl,SEEK_SET);
-                 write(file->fileDescriptor,blockBitMap,sizeof(blockBitMap));
-                 fetchBlockBitMap(ext2,file, table,blockGNum,offsetToSuperBlock,translationMapData,blockBitMap,offsetBl);
-                 m--;
-               }
-             }
-             writeBlock(ext2,singleIndirectBlocks[l],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
-           }
            int remDirect[(blocksWithin%(n*n))%n];
            for(int r=0;r<=(((blocksWithin-1)%(n*n))%n);r++){
              remDirect[r]=allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -785,7 +796,8 @@ int main(int argc, char* argv[]){
                r--;
              }
            }
-           writeBlock(ext2,singleIndirectBlocks[numberOfSingle-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
+
+           writeBlock(ext2,remSingle[index-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
            in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512+(blockSize/512)+((numDoubleIndirect*blockSize)/512)+(numberOfSingle*blockSize)/512;
          }
           struct Entry newDirectory;
