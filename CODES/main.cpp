@@ -582,7 +582,7 @@ int main(int argc, char* argv[]){
                 else keep= false;
              }
              blocksWithin= numBlocksNeeded-12-n;
-             int numberOfSingleRequired= (blocksWithin-1)/n;
+             int numberOfSingleRequired= blocksWithin/n;
              if(blocksWithin%n !=0) numberOfSingleRequired++;
              int singleIndirectBlocks[numberOfSingleRequired];
              for(int i=0;i<numberOfSingleRequired;i++){
@@ -716,7 +716,7 @@ int main(int argc, char* argv[]){
                else keep= false;
             }
             blocksWithin= numBlocksNeeded-12-n-pow(n,2);
-            int numDoubleIndirect= (blocksWithin-1)/pow(n,2);
+            int numDoubleIndirect= blocksWithin/pow(n,2);
             if(blocksWithin%(n*n) !=0) numDoubleIndirect++;
             int doubleIndirectBlocks[numDoubleIndirect];
             for(int i=0;i<numDoubleIndirect;i++){
@@ -730,7 +730,7 @@ int main(int argc, char* argv[]){
               }
            }
            writeBlock(ext2,in.i_block[14],file,mbrData,translationMapData,doubleIndirectBlocks,sizeof(doubleIndirectBlocks));
-           int numberOfSingle= (blocksWithin-1)/n;
+           int numberOfSingle= blocksWithin/n;
            if(blocksWithin%n !=0) numberOfSingle++;
            int singleIndirectBlocks[numberOfSingle];
            int directBlocks[n];
@@ -758,7 +758,7 @@ int main(int argc, char* argv[]){
              }
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,4*n);
            }
-           int index=((blocksWithin-1)%(n*n))/n;
+           int index=((blocksWithin)%(n*n))/n;
            if(((blocksWithin)%(n*n))%n !=0) index++;
            int remSingle[index];
            for(int e=0;e<index;e++){
