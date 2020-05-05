@@ -756,7 +756,7 @@ int main(int argc, char* argv[]){
                 }
                 writeBlock(ext2,singleIndirectBlocks[k],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
              }
-             writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,sizeof(singleIndirectBlocks));
+             writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,4*n);
            }
            int index=((blocksWithin-1)%(n*n))/n;
            if(((blocksWithin)%(n*n))%n !=0) index++;
@@ -796,7 +796,6 @@ int main(int argc, char* argv[]){
                r--;
              }
            }
-
            writeBlock(ext2,remSingle[index-1],file,mbrData,translationMapData,remDirect,sizeof(remDirect));
            in.i_blocks = ((numBlocksNeeded*blockSize)/512)+(blockSize/512)+(blockSize/512)+(numberOfSingleRequired*blockSize)/512+(blockSize/512)+((numDoubleIndirect*blockSize)/512)+(numberOfSingle*blockSize)/512;
          }
