@@ -610,8 +610,11 @@ int main(int argc, char* argv[]){
               }
               writeBlock(ext2,singleIndirectBlocks[j],file,mbrData,translationMapData,directBlocks,sizeof(directBlocks));
             }
-            int remDirect[blocksWithin%n];
-            for(int q=0;q<=(blocksWithin-1)%n;q++){
+            int rem;
+            if(blocksWithin%n ==0) rem=n;
+            else rem=blocksWithin%n;
+            int remDirect[rem];
+            for(int q=0;q<rem;q++){
               remDirect[q]=allocateBlock(ext2,table,blockBitMap,blockGNum);
               if(remDirect[q] ==-1 && blockGNum<totalBlockGroup){
                 blockGNum++;
@@ -758,8 +761,11 @@ int main(int argc, char* argv[]){
              }
              writeBlock(ext2,doubleIndirectBlocks[j],file,mbrData,translationMapData,singleIndirectBlocks,4*n);
            }
-           int index=((blocksWithin)%(n*n))/n;
-           if(((blocksWithin)%(n*n))%n !=0) index++;
+           int remk;
+           if((blocksWithin)%(n*n) ==0) remk=n;
+           else remk=(blocksWithin)%(n*n);
+           int index=(remk)/n;
+           if((remk)%n !=0) index++;
            int remSingle[index];
            for(int e=0;e<index;e++){
              remSingle[e]= allocateBlock(ext2,table,blockBitMap,blockGNum);
@@ -785,8 +791,11 @@ int main(int argc, char* argv[]){
             }
            }
            writeBlock(ext2,doubleIndirectBlocks[numDoubleIndirect-1],file,mbrData,translationMapData,remSingle,sizeof(remSingle));
-           int remDirect[(blocksWithin%(n*n))%n];
-           for(int r=0;r<=(((blocksWithin-1)%(n*n))%n);r++){
+           int rem;
+           if((blocksWithin%(n*n))%n ==0) rem=n;
+           else rem=(blocksWithin%(n*n))%n;
+           int remDirect[rem];
+           for(int r=0;r<rem;r++){
              remDirect[r]=allocateBlock(ext2,table,blockBitMap,blockGNum);
              if(remDirect[r] ==-1 && blockGNum<totalBlockGroup){
                blockGNum++;
