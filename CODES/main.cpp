@@ -178,6 +178,7 @@ int main(int argc, char* argv[]){
   cout << "The commands are : " << "\n" ;
   cout << "List all items: ls " << "\n";
   cout << "Long list:  ls -l" << "\n";
+  cout << "To terminate the project: quit " << "\n";
   cout << "Change Directory: cd [Directory Name]" << "\n";
   cout << "Go back to previous directory: cd" << "\n";
   cout << "To clear screen: clear" << "\n";
@@ -372,7 +373,7 @@ int main(int argc, char* argv[]){
         *(hostpath+i)= path[1][i];
       }
       cout<<hostpath<<endl;
-      int op = open(hostpath, O_CREAT| O_RDWR|O_APPEND, S_IRWXU );
+      int op = open(hostpath, O_CREAT| O_RDWR|O_TRUNC, S_IRWXU );
       free(hostpath);
       for(int j = 0; j < diretoryName.size(); j++) {
           fetchInode(ext2,file,table,tempDirectory.inodeNumber,in,offsetToSuperBlock,translationMapData,inodeMetaData);
@@ -405,6 +406,9 @@ int main(int argc, char* argv[]){
         cout << "Unable to write" << "\n";
       }
 
+   }
+   else if(command == "quit"){
+     return EXIT_FAILURE;
    }
    else if(command.length() > 5 && Contains(command, "write ")) {
      string newString = command.substr(7, command.length() - 7);
